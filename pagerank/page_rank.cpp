@@ -83,14 +83,15 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         //if (densidade < 1) {
         # pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
-          solution[i] = 0;
+          double auxiliar = 0;
           const Vertex* start = incoming_begin(g, i);
           const Vertex* end = incoming_end(g, i);
           for (const Vertex* v = start; v != end; v++) {
             // Edge (i, *v);
-            solution[i] += score_old[*v] / outgoing_size(g, *v);
+            auxiliar += score_old[*v] / outgoing_size(g, *v);
           }
-          solution[i] = (damping * solution[i]) + (1.0-damping) / numNodes;
+          solution[i] = auxiliar;
+          solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
           if (outgoing_size(g, i) == 0) {
             myaux += damping * score_old[i] / numNodes;
           }
