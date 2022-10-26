@@ -148,7 +148,15 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
-          mydiff += abs(solution[i] - score_old[i]);
+          double aux1 = solution[i], aux2 = score_old[i];
+
+          if (aux1 > aux2) {
+            mydiff += abs(aux1 - aux2);
+          }
+          else {
+            mydiff += abs(aux2 - aux1);
+          }
+          
         }
       
         #pragma omp atomic
