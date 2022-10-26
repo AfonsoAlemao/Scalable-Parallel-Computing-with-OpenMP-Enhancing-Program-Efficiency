@@ -66,7 +66,8 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
     while (!converged) {
 
-      #pragma omp parallel shared(aux, numNodes, score_old, solution){
+      #pragma omp parallel shared(aux, numNodes, score_old, solution) 
+      {
 
         #pragma omp for 
         for (int i = 0; i < numNodes; ++i) {
@@ -104,7 +105,8 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         for (int i = 0; i < numNodes; ++i) {
             solution[i] += aux;
         }
-        }
+      
+
         // compute how much per-node scores have changed
         // quit once algorithm has converged
 
@@ -114,9 +116,9 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         #pragma omp for reduction(+:global_diff)
         for (int i = 0; i < numNodes; ++i) {
           global_diff += abs(solution[i] - score_old[i]);
+        }
       }
-      
-      
+
       converged = (global_diff < convergence);
     }
   
