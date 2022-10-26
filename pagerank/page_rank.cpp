@@ -151,10 +151,10 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           double aux1 = solution[i], aux2 = score_old[i];
 
           if (aux1 > aux2) {
-            mydiff += abs(aux1 - aux2);
+            mydiff += aux1 - aux2;
           }
           else {
-            mydiff += abs(aux2 - aux1);
+            mydiff += aux2 - aux1;
           }
           
         }
