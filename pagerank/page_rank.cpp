@@ -62,8 +62,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
     bool converged = false;
     double aux = 0;
     int chunk_size = numNodes / 24 + 1;
-    double densidade = 2 * num_edges(g) / numNodes;
-
+    // double densidade = 2 * num_edges(g) / numNodes;
     while (!converged) {
       global_diff = 0;
       aux = 0;
@@ -81,25 +80,36 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
         // compute score_new[vi] for all nodes vi:
         //score_new[vi] = sum over all nodes vj reachable from incoming edges { score_old[vj] / number of edges leaving vj  }
-        //#pragma omp for schedule(dynamic, chunk_size)
+        //if (densidade < 1) {
         # pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           const Vertex* start = incoming_begin(g, i);
           const Vertex* end = incoming_end(g, i);
-          //# pragma omp for schedule(dynamic, chunk_size)
           for (const Vertex* v = start; v != end; v++) {
             // Edge (i, *v);
             solution[i] += score_old[*v] / outgoing_size(g, *v);
           }
-          /*for (const Vertex* v = start; v != end; v++) {
-            // Edge (i, *v);
-            mysum += score_old[*v] / outgoing_size(g, *v);
-          }
-
-          #pragma omp atomic
-          solution[i] += mysum;
-          #pragma omp barrier*/
         }
+        /*}
+        else {
+          for (int i = 0; i < numNodes; ++i) {
+            const Vertex* start = incoming_begin(g, i);
+            const Vertex* end = incoming_end(g, i);
+            int chunk = (num_edges(g) / numNodes) + 1;
+            if (chunk < 8) {
+              chunk = 16;
+            }
+            # pragma omp for schedule(dynamic, chunk)
+            for (const Vertex* v = start; v != end; v++) {
+              // Edge (i, *v);
+              solution[i] += score_old[*v] / outgoing_size(g, *v);
+            }
+            #pragma omp atomic
+            solution[i] += mysum;
+            #pragma omp barrier
+          }
+        }
+        */
 
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
