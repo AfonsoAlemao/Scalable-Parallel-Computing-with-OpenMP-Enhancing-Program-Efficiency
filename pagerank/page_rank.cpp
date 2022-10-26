@@ -75,7 +75,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           score_old[i] = solution[i];
-          solution[i] = 0;
+          //solution[i] = 0;
         }
 
         // compute score_new[vi] for all nodes vi:
@@ -83,11 +83,16 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         //if (densidade < 1) {
         # pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
+          solution[i] = 0;
           const Vertex* start = incoming_begin(g, i);
           const Vertex* end = incoming_end(g, i);
           for (const Vertex* v = start; v != end; v++) {
             // Edge (i, *v);
             solution[i] += score_old[*v] / outgoing_size(g, *v);
+          }
+          solution[i] = (damping * solution[i]) + (1.0-damping) / numNodes;
+          if (outgoing_size(g, i) == 0) {
+            myaux += damping * score_old[i] / numNodes;
           }
         }
         /*}
@@ -111,18 +116,18 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         }
         */
 
-        #pragma omp for schedule(dynamic, chunk_size)
+        /*#pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           solution[i] = (damping * solution[i]) + (1.0-damping) / numNodes;
-        }
+        }*/
 
         //score_new[vi] += sum over all nodes v in graph with no outgoing edges { damping * score_old[v] / numNodes }
-        #pragma omp for schedule(dynamic, chunk_size)
+        /*#pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           if (outgoing_size(g, i) == 0) {
             myaux += damping * score_old[i] / numNodes;
           }
-        }
+        }*/
 
         #pragma omp atomic
         aux += myaux;
@@ -170,5 +175,5 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
       converged = (global_diff < convergence);
     }
-  
+    free(score_old);
 }
