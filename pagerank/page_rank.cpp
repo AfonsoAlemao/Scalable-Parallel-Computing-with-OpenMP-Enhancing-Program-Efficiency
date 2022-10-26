@@ -63,7 +63,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
     bool converged = false;
 
     while (!converged) {
-      #pragma omp parallel for
+      #pragma omp parallel for shared(numNodes, score_old, solution)
       for (int i = 0; i < numNodes; ++i) {
         score_old[i] = solution[i];
         solution[i] = 0;
@@ -71,6 +71,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
       // compute score_new[vi] for all nodes vi:
       //score_new[vi] = sum over all nodes vj reachable from incoming edges { score_old[vj] / number of edges leaving vj  }
+      #pragma omp parallel for shared(numNodes, score_old, solution)
       for (int i = 0; i < numNodes; ++i) {
         const Vertex* start = incoming_begin(g, i);
         const Vertex* end = incoming_end(g, i);
@@ -79,19 +80,22 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           solution[i] += score_old[*v] / outgoing_size(g, *v);
         }
       }
-      
-      #pragma omp parallel for
+
+      #pragma omp parallel for shared(numNodes, solution)
       for (int i = 0; i < numNodes; ++i) {
         solution[i] = (damping * solution[i]) + (1.0-damping) / numNodes;
       }
 
       //score_new[vi] += sum over all nodes v in graph with no outgoing edges { damping * score_old[v] / numNodes }
       double aux = 0;
+      #pragma omp parallel for reduction(+:aux)
       for (int i = 0; i < numNodes; ++i) {
         if (outgoing_size(g, i) == 0) {
           aux += damping * score_old[i] / numNodes;
         }
       }
+
+      #pragma omp parallel for shared(numNodes, solution)
       for (int i = 0; i < numNodes; ++i) {
           solution[i] += aux;
       }
@@ -100,7 +104,9 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       // quit once algorithm has converged
 
       // global_diff = sum over all nodes vi { abs(score_new[vi] - score_old[vi]) };
+
       global_diff = 0;
+      #pragma omp parallel for reduction(+:global_diff)
       for (int i = 0; i < numNodes; ++i) {
         global_diff += abs(solution[i] - score_old[i]);
       }
