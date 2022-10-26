@@ -65,9 +65,12 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
 
     while (!converged) {
-
-      #pragma omp parallel shared(aux, numNodes, score_old, solution) 
+      global_diff = 0;
+      aux = 0;
+      #pragma omp parallel shared(aux, numNodes, score_old, solution, global_diff) 
       {
+        double mydiff = 0;
+        double myaux = 0;
 
         #pragma omp for 
         for (int i = 0; i < numNodes; ++i) {
@@ -93,13 +96,23 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         }
 
         //score_new[vi] += sum over all nodes v in graph with no outgoing edges { damping * score_old[v] / numNodes }
-        aux = 0;
-        #pragma omp for reduction(+:aux)
+        #pragma omp for
+        for (int i = 0; i < numNodes; ++i) {
+          if (outgoing_size(g, i) == 0) {
+            myaux += damping * score_old[i] / numNodes;
+          }
+        }
+
+        #pragma omp atomic
+        aux += myaux;
+        #pragma omp barrier
+        
+        /*#pragma omp for reduction(+:aux)
         for (int i = 0; i < numNodes; ++i) {
           if (outgoing_size(g, i) == 0) {
             aux += damping * score_old[i] / numNodes;
           }
-        }
+        }*/
 
         #pragma omp for
         for (int i = 0; i < numNodes; ++i) {
@@ -112,11 +125,18 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
         // global_diff = sum over all nodes vi { abs(score_new[vi] - score_old[vi]) };
       
-        global_diff = 0;
-        #pragma omp for reduction(+:global_diff)
+        #pragma omp for
+        for (int i = 0; i < numNodes; ++i) {
+          mydiff += abs(solution[i] - score_old[i]);
+        }
+      
+        #pragma omp atomic
+        global_diff += mydiff;
+
+        /*#pragma omp for reduction(+:global_diff)
         for (int i = 0; i < numNodes; ++i) {
           global_diff += abs(solution[i] - score_old[i]);
-        }
+        }*/
       }
 
       converged = (global_diff < convergence);
