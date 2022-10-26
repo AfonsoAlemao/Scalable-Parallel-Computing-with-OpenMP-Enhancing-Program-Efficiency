@@ -61,7 +61,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
     score_old = (double*) malloc(sizeof(double) * numNodes);
     bool converged = false;
     double aux = 0;
-    int chunk_size = (numNodes + 800 - 1) / 800;
+    int chunk_size = (numNodes + 8000 - 1) / 8000;
     // double densidade = 2 * num_edges(g) / numNodes;
     while (!converged) {
       global_diff = 0;
