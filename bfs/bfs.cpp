@@ -44,17 +44,20 @@ void top_down_step(
         for (int neighbor=start_edge; neighbor<end_edge; neighbor++) {
             int outgoing = g->outgoing_edges[neighbor];
             int index = 0;
-            
-            # pragma omp critical 
-            {
+           
             if (distances[outgoing] == NOT_VISITED_MARKER) {
+                
                 distances[outgoing] = distances[node] + 1;    
                 
-                index += new_frontier->count++;
+                __sync_bool_compare_and_swap (&index, index, new_frontier->count++);
+                // # pragma omp critical 
+                //{
+                //index = new_frontier->count++;
+                //}
 
                 new_frontier->vertices[index] = outgoing;
             }
-            }
+            
         }
     }
 }
@@ -98,8 +101,6 @@ void bfs_top_down(Graph graph, solution* sol) {
 #endif
 
         // swap pointers
-        //vertex_set* tmp;
-        //__sync_bool_compare_and_swap ((vertex_set*) tmp, (vertex_set*) frontier, (vertex_set*) new_frontier);
 
         vertex_set* tmp = frontier;
         frontier = new_frontier;
@@ -196,6 +197,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
     vertex_set* new_frontier = &list2;
 
     // initialize all nodes to NOT_VISITED
+    # pragma omp parallel for schedule(dynamic, 100)
     for (int i=0; i<graph->num_nodes; i++)
         sol->distances[i] = NOT_VISITED_MARKER;
 
