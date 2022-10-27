@@ -124,8 +124,11 @@ void bottom_up_step(
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
+            
     for (int i=0; i < num_nodes(g); i++) {
+        int j = 0;
         if (distances[i] == NOT_VISITED_MARKER) {
+            // printf("i = %d\n", i);
             int start_edge = g->incoming_starts[i];
             int end_edge = (i == g->num_nodes - 1)
                             ? g->num_edges
@@ -136,12 +139,23 @@ void bottom_up_step(
                 int index = 0;
 
                 if(distances[incoming] != NOT_VISITED_MARKER) {
-                    distances[i] = distances[incoming] + 1;    
-                    
-                    index += new_frontier->count++;
+                    for (j=0; j<frontier->count; j++) {
+                        int node = frontier->vertices[j];
 
-                    new_frontier->vertices[index] = i;
+                        if (node == incoming) {
+                            // printf("Adicionei ligacao %d-%d\n", i, incoming);
+                            distances[i] = distances[incoming] + 1;    
+                            
+                            index += new_frontier->count++;
 
+                            new_frontier->vertices[index] = i;
+
+                            j = frontier->count + 2;
+                        }
+                    }
+                }
+
+                if (j == frontier->count + 2) {
                     break;
                 }
             }
