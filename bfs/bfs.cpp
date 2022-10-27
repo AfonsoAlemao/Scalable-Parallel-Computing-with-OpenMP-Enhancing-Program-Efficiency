@@ -49,11 +49,11 @@ void top_down_step(
                 
                 distances[outgoing] = distances[node] + 1;    
                 
-                __sync_bool_compare_and_swap (&index, index, new_frontier->count++);
-                // # pragma omp critical 
-                //{
-                //index = new_frontier->count++;
-                //}
+                //__sync_bool_compare_and_swap (&index, index, new_frontier->count++);
+                # pragma omp critical 
+                {
+                index = new_frontier->count++;
+                }
 
                 new_frontier->vertices[index] = outgoing;
             }
