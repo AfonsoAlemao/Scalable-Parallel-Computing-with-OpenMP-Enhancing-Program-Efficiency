@@ -141,10 +141,10 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           }
         }*/
 
-        #pragma omp for schedule(dynamic, chunk_size)
+        /*#pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
             solution[i] += aux;
-        }
+        }*/
       
 
         // compute how much per-node scores have changed
@@ -154,6 +154,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
+          solution[i] += aux;
           double aux1 = solution[i], aux2 = score_old[i];
 
           if (aux1 > aux2) {
