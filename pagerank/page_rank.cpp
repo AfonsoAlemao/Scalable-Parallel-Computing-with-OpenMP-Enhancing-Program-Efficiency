@@ -90,7 +90,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
             // Edge (i, *v);
             auxiliar += score_old[*v] / outgoing_size(g, *v);
           }
-          solution[i] = auxiliar;
           solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
           if (outgoing_size(g, i) == 0) {
             myaux += damping * score_old[i] / numNodes;
