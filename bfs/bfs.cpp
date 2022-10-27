@@ -131,10 +131,13 @@ void bottom_up_step(
                             : g->incoming_starts[i + 1];
 
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                if(distances[neighbor] != NOT_VISITED_MARKER) {
-                    distances[i] = distances[neighbor] + 1;    
+                int incoming = g->incoming_edges[neighbor];
+                int index = 0;
+
+                if(distances[incoming] != NOT_VISITED_MARKER) {
+                    distances[i] = distances[incoming] + 1;    
                     
-                    int index = new_frontier->count++;
+                    index += new_frontier->count++;
 
                     new_frontier->vertices[index] = i;
 
