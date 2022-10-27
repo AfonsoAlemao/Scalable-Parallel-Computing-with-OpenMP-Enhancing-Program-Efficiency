@@ -75,7 +75,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           score_old[i] = solution[i];
-          //solution[i] = 0;
         }
 
         // compute score_new[vi] for all nodes vi:
@@ -93,63 +92,10 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
           if (outgoing_size(g, i) == 0) {
             myaux += damping * score_old[i] / numNodes;
-          }
-        }
-        /*}
-        else {
-          for (int i = 0; i < numNodes; ++i) {
-            const Vertex* start = incoming_begin(g, i);
-            const Vertex* end = incoming_end(g, i);
-            int chunk = (num_edges(g) / numNodes) + 1;
-            if (chunk < 8) {
-              chunk = 16;
-            }
-            # pragma omp for schedule(dynamic, chunk)
-            for (const Vertex* v = start; v != end; v++) {
-              // Edge (i, *v);
-              solution[i] += score_old[*v] / outgoing_size(g, *v);
-            }
             #pragma omp atomic
-            solution[i] += mysum;
-            #pragma omp barrier
+            aux += myaux;
           }
         }
-        */
-
-        /*#pragma omp for schedule(dynamic, chunk_size)
-        for (int i = 0; i < numNodes; ++i) {
-          solution[i] = (damping * solution[i]) + (1.0-damping) / numNodes;
-        }*/
-
-        //score_new[vi] += sum over all nodes v in graph with no outgoing edges { damping * score_old[v] / numNodes }
-        /*#pragma omp for schedule(dynamic, chunk_size)
-        for (int i = 0; i < numNodes; ++i) {
-          if (outgoing_size(g, i) == 0) {
-            myaux += damping * score_old[i] / numNodes;
-          }
-        }*/
-
-        #pragma omp atomic
-        aux += myaux;
-        #pragma omp barrier
-
-        /*#pragma omp for reduction(+:aux)
-        for (int i = 0; i < numNodes; ++i) {
-          if (outgoing_size(g, i) == 0) {
-            aux += damping * score_old[i] / numNodes;
-          }
-        }*/
-
-        /*#pragma omp for schedule(dynamic, chunk_size)
-        for (int i = 0; i < numNodes; ++i) {
-            solution[i] += aux;
-        }*/
-      
-
-        // compute how much per-node scores have changed
-        // quit once algorithm has converged
-
-        // global_diff = sum over all nodes vi { abs(score_new[vi] - score_old[vi]) };
       
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
@@ -167,11 +113,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       
         #pragma omp atomic
         global_diff += mydiff;
-
-        /*#pragma omp for reduction(+:global_diff)
-        for (int i = 0; i < numNodes; ++i) {
-          global_diff += abs(solution[i] - score_old[i]);
-        }*/
       }
 
       converged = (global_diff < convergence);
