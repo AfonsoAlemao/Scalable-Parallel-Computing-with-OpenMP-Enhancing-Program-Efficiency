@@ -124,7 +124,8 @@ void bottom_up_step(
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
-            
+    
+    # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
     for (int i=0; i < num_nodes(g); i++) {
         int j = 0;
         if (distances[i] == NOT_VISITED_MARKER) {
@@ -146,7 +147,10 @@ void bottom_up_step(
                             // printf("Adicionei ligacao %d-%d\n", i, incoming);
                             distances[i] = distances[incoming] + 1;    
                             
-                            index += new_frontier->count++;
+                            # pragma omp critical 
+                            {
+                                index += new_frontier->count++;
+                            }
 
                             new_frontier->vertices[index] = i;
 
