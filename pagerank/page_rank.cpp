@@ -50,7 +50,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   double aux = 0;
   int chunk_size = (numNodes + 8000 - 1) / 8000;
 
-  #pragma omp parallel for schedule(dynamic, chunk_size)
+  #pragma omp parallel for schedule(static)
   for (int i = 0; i < numNodes; ++i) {
     score_old[i] = equal_prob;
   }
