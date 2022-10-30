@@ -84,10 +84,13 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
           if (outgoing_size(g, i) == 0) {
             myaux += damping * score_old[i] / numNodes;
-            #pragma omp atomic
-            aux += myaux;
+            
           }
         }
+
+        #pragma omp atomic
+        aux += myaux;
+        #pragma omp barrier
 
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
