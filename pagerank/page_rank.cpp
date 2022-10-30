@@ -88,16 +88,22 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
             aux += myaux;
           }
         }
-      
+
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           solution[i] += aux;
           double aux1 = solution[i], aux2 = score_old[i];
-          mydiff = fabs(aux1-aux2);
+          if (aux1 > aux2) {
+            mydiff += aux1 - aux2;
+          }
+          else {
+            mydiff += aux2 - aux1;
+          }
         }
-        
+
         #pragma omp atomic
         global_diff += mydiff;
+        #pragma omp barrier
       }
 
       converged = (global_diff < convergence);
