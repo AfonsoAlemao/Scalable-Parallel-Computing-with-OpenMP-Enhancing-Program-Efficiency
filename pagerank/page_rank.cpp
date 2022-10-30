@@ -48,11 +48,10 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   score_old = (double*) malloc(sizeof(double) * numNodes);
   bool converged = false;
   double aux = 0;
-  int chunk_size = (numNodes + 8000 - 1) / 8000;
+  int chunk_size = (numNodes + 800 - 1) / 800;
 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic, chunk_size)
   for (int i = 0; i < numNodes; ++i) {
-    //solution[i] = equal_prob;
     score_old[i] = equal_prob;
   }
 
@@ -66,7 +65,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
         // compute score_new[vi] for all nodes vi:
         //score_new[vi] = sum over all nodes vj reachable from incoming edges { score_old[vj] / number of edges leaving vj  }
-        //if (densidade < 1) {
         # pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
           double auxiliar = 0;
