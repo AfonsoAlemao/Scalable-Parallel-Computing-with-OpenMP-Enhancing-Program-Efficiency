@@ -35,7 +35,7 @@ void top_down_step(
     if (frontier->count == 0) {
         return;
     }
-    int dist_frontier = distances[frontier->vertices[0]];
+    int dist_frontier = distances[frontier->vertices[0]], count = 0;
 
     # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
     for (int i = 0; i < frontier->count; i++) {
@@ -55,7 +55,8 @@ void top_down_step(
             if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {                
                 # pragma omp critical 
                 {
-                index = new_frontier->count++;
+                index = count++;
+                // index = new_frontier->count++;
                 }
 
                 new_frontier->vertices[index] = outgoing;
@@ -63,7 +64,8 @@ void top_down_step(
             
         }
     }
-    printf("Frontier count = %d\n", frontier->count);
+    new_frontier->count = count; 
+    // printf("Frontier count = %d\n", frontier->count);
 }
 
 // Implements top-down BFS.
