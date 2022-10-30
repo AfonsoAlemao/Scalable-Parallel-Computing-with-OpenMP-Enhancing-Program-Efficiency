@@ -18,20 +18,7 @@
 void pageRank(Graph g, double* solution, double damping, double convergence)
 {
 
-
-  // initialize vertex weights to uniform probability. Double
-  // precision scores are used to avoid underflow for large graphs
-
-  int numNodes = num_nodes(g);
-  double equal_prob = 1.0 / numNodes;
-
-  #pragma omp parallel for
-  for (int i = 0; i < numNodes; ++i) {
-    solution[i] = equal_prob;
-  }
-  
-  
-  /*
+    /*
      TODO STUDENTS: Implement the page rank algorithm here.  You
      are expected to parallelize the algorithm using openMP.  Your
      solution may need to allocate (and free) temporary arrays.
@@ -51,11 +38,23 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
        converged = (global_diff < convergence)
      }
    */
-    double* score_old, global_diff = 0;
-    score_old = (double*) malloc(sizeof(double) * numNodes);
-    bool converged = false;
-    double aux = 0;
-    int chunk_size = (numNodes + 8000 - 1) / 8000;
+    
+  // initialize vertex weights to uniform probability. Double
+  // precision scores are used to avoid underflow for large graphs
+
+  int numNodes = num_nodes(g);
+  double equal_prob = 1.0 / numNodes;
+  double* score_old, global_diff = 0;
+  score_old = (double*) malloc(sizeof(double) * numNodes);
+  bool converged = false;
+  double aux = 0;
+  int chunk_size = (numNodes + 8000 - 1) / 8000;
+
+  #pragma omp parallel for
+  for (int i = 0; i < numNodes; ++i) {
+    //solution[i] = equal_prob;
+    score_old[i] = equal_prob;
+  }
 
     while (!converged) {
       global_diff = 0;
@@ -64,11 +63,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       {
         double mydiff = 0;
         double myaux = 0;
-
-        #pragma omp for schedule(dynamic, chunk_size)
-        for (int i = 0; i < numNodes; ++i) {
-          score_old[i] = solution[i];
-        }
 
         // compute score_new[vi] for all nodes vi:
         //score_new[vi] = sum over all nodes vj reachable from incoming edges { score_old[vj] / number of edges leaving vj  }
@@ -103,6 +97,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           else {
             mydiff += aux2 - aux1;
           }
+          score_old[i] = aux1;
         }
 
         #pragma omp atomic
