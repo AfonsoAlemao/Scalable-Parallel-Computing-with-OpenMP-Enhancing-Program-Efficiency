@@ -24,6 +24,8 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
   int numNodes = num_nodes(g);
   double equal_prob = 1.0 / numNodes;
+
+  #pragma omp parallel for
   for (int i = 0; i < numNodes; ++i) {
     solution[i] = equal_prob;
   }
@@ -62,7 +64,6 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
       {
         double mydiff = 0;
         double myaux = 0;
-        double mysum = 0;
 
         #pragma omp for schedule(dynamic, chunk_size)
         for (int i = 0; i < numNodes; ++i) {
