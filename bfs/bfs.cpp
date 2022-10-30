@@ -33,7 +33,7 @@ void top_down_step(
     int* distances)
 {
     # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
-    for (int i=0; i < frontier->count; i++) {
+    for (int i = 0; i < frontier->count; i++) {
         int node = frontier->vertices[i];
 
         int start_edge = g->outgoing_starts[node];
@@ -183,10 +183,6 @@ void bottom_up_step(
 
                     new_frontier->vertices[index] = i;
 
-                    j = frontier->count + 2;
-                }
-
-                if (j == frontier->count + 2) {
                     break;
                 }
             }
@@ -397,7 +393,9 @@ void bfs_hybrid(Graph graph, solution* sol)
 #endif
 
         vertex_set_clear(new_frontier);
-        if (frontier->count > 100) {
+        // Top down complexity: number of frontier nodes
+        // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
+        if (frontier->count * frontier->count > graph->num_nodes) {
             bottom_up_step(graph, frontier, new_frontier, sol->distances);
         }
         else {
