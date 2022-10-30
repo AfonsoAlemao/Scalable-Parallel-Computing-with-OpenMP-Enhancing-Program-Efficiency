@@ -51,7 +51,7 @@ void top_down_step(
             int outgoing = g->outgoing_edges[neighbor];
             int index = 0;
             int curvalue = 0;
-           
+
             if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {                
                 # pragma omp critical 
                 {
@@ -63,6 +63,7 @@ void top_down_step(
             
         }
     }
+    printf("Frontier count = %d\n", frontier->count);
 }
 
 // Implements top-down BFS.
