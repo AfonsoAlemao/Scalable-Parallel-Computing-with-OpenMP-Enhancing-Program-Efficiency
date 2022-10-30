@@ -150,10 +150,128 @@ void bottom_up_step(
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
-    
+    if (frontier->count == 0) {
+        return;
+    }
+    int dist_frontier = distances[frontier->vertices[0]];
+    // printf("dist_frontier = %d\n", dist_frontier);
+
     # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
     for (int i = 0; i < num_nodes(g); i++) {
+        // printf("Tou no vertice %d\n", i);
         int j = 0;
+        if (distances[i] == NOT_VISITED_MARKER) {
+            int start_edge = g->incoming_starts[i];
+            int end_edge = (i == g->num_nodes - 1)
+                            ? g->num_edges
+                            : g->incoming_starts[i + 1];
+
+            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                int incoming = g->incoming_edges[neighbor];
+                int index = 0;
+                // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
+                if(distances[incoming] == dist_frontier) {
+                    int node = frontier->vertices[j];
+
+                    // printf("Adicionei ligacao %d-%d\n", i, incoming);
+                    distances[i] = dist_frontier + 1;    
+                    
+                    # pragma omp critical 
+                    {
+                        index += new_frontier->count++;
+                    }
+
+                    new_frontier->vertices[index] = i;
+
+                    j = frontier->count + 2;
+                }
+
+                if (j == frontier->count + 2) {
+                    break;
+                }
+            }
+        }
+    }
+    // printf("\n\n");
+}
+
+    /*for (int i = 0; i < num_nodes(g); i++) {
+        printf("%d\n", i);
+        int j = 0;
+        // printf("Tou no vertice %d\n", i);
+
+        if (distances[i] == NOT_VISITED_MARKER) {
+            //printf("Vertice %d ainda nao foi visitado\n", i);
+            int start_edge = g->incoming_starts[i];
+            int end_edge = (i == g->num_nodes - 1)
+                            ? g->num_edges
+                            : g->incoming_starts[i + 1];
+
+            // printf("Lista de vizinhos\n");
+            // for (int neighbor=start_edge; neighbor<end_edge; neighbor++) {
+            //     printf("%d\n", g->incoming_edges[neighbor]);
+            // }
+
+            for (j = 0; j < frontier->count; j++) {
+                int node = frontier->vertices[j];
+                // printf("Vou procurar se tenho um vizinho igual ao vertice %d que pertence à fronteira\n", node);
+                int neighbor = ProcuraBinaria(g->incoming_edges, start_edge, end_edge - 1, node);
+                
+                if (neighbor != -1) {
+                    // printf("Encontrei um vizinho %d que está na fronteira\n", neighbor);
+                    int incoming = g->incoming_edges[neighbor];
+                    int index = 0;
+                
+                    // printf("Adicionei ligacao %d-%d\n", i, incoming);
+                    distances[i] = distances[incoming] + 1;    
+                    
+                    # pragma omp critical 
+                    {
+                        index += new_frontier->count++;
+                    }
+
+                    new_frontier->vertices[index] = i;
+
+                    break;
+                } 
+                // else {
+                //    printf("Nao encontrei um vizinho que está na fronteira\n");
+                //}
+            }
+
+        }
+    }*/
+    
+
+     
+    
+    /*for (int i=0; i<frontier->count; i++) {
+
+        int node = frontier->vertices[i];
+
+        int start_edge = g->outgoing_starts[node];
+        int end_edge = (node == g->num_nodes - 1)
+                           ? g->num_edges
+                           : g->outgoing_starts[node + 1];
+
+        // attempt to add all neighbors to the new frontier
+        for (int neighbor=start_edge; neighbor<end_edge; neighbor++) {
+            int outgoing = g->outgoing_edges[neighbor];
+            int index = 0;
+            {
+            if (distances[outgoing] == NOT_VISITED_MARKER) {
+                distances[outgoing] = distances[node] + 1;    
+                
+                index += new_frontier->count++;
+
+                new_frontier->vertices[index] = outgoing;
+            }
+            }
+        }
+    }*/
+   
+
+    
         /*if (distances[i] == NOT_VISITED_MARKER) {
             // printf("i = %d\n", i);
             int start_edge = g->incoming_starts[i];
@@ -190,77 +308,6 @@ void bottom_up_step(
                 }
             }
         }*/
-        // printf("Tou no vertice %d\n", i);
-
-        if (distances[i] == NOT_VISITED_MARKER) {
-            //printf("Vertice %d ainda nao foi visitado\n", i);
-            int j = 0;
-            int start_edge = g->incoming_starts[i];
-            int end_edge = (i == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->incoming_starts[i + 1];
-
-            /* printf("Lista de vizinhos\n");
-            for (int neighbor=start_edge; neighbor<end_edge; neighbor++) {
-                printf("%d\n", g->incoming_edges[neighbor]);
-            }*/
-
-            for (j = 0; j < frontier->count; j++) {
-                int node = frontier->vertices[j];
-                // printf("Vou procurar se tenho um vizinho igual ao vertice %d que pertence à fronteira\n", node);
-                int neighbor = ProcuraBinaria(g->incoming_edges, start_edge, end_edge - 1, node);
-                
-                if (neighbor != -1) {
-                    // printf("Encontrei um vizinho %d que está na fronteira\n", neighbor);
-                    int incoming = g->incoming_edges[neighbor];
-                    int index = 0;
-                
-                    // printf("Adicionei ligacao %d-%d\n", i, incoming);
-                    distances[i] = distances[incoming] + 1;    
-                    
-                    # pragma omp critical 
-                    {
-                        index += new_frontier->count++;
-                    }
-
-                    new_frontier->vertices[index] = i;
-
-                    break;
-                } 
-                /* else {
-                    printf("Nao encontrei um vizinho que está na fronteira\n");
-                }*/
-            }
-
-        }
-    }
-    
-    
-    /*for (int i=0; i<frontier->count; i++) {
-
-        int node = frontier->vertices[i];
-
-        int start_edge = g->outgoing_starts[node];
-        int end_edge = (node == g->num_nodes - 1)
-                           ? g->num_edges
-                           : g->outgoing_starts[node + 1];
-
-        // attempt to add all neighbors to the new frontier
-        for (int neighbor=start_edge; neighbor<end_edge; neighbor++) {
-            int outgoing = g->outgoing_edges[neighbor];
-            int index = 0;
-            {
-            if (distances[outgoing] == NOT_VISITED_MARKER) {
-                distances[outgoing] = distances[node] + 1;    
-                
-                index += new_frontier->count++;
-
-                new_frontier->vertices[index] = outgoing;
-            }
-            }
-        }
-    }*/
-}
 
 void bfs_bottom_up(Graph graph, solution* sol)
 {
