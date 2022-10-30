@@ -65,7 +65,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
 
       // compute score_new[vi] for all nodes vi:
       //score_new[vi] = sum over all nodes vj reachable from incoming edges { score_old[vj] / number of edges leaving vj  }
-      # pragma omp for schedule(dynamic, chunk_size) nowait
+      # pragma omp for schedule(dynamic, chunk_size) 
       for (int i = 0; i < numNodes; ++i) {
         double auxiliar = 0;
         const Vertex* start = incoming_begin(g, i);
@@ -76,30 +76,26 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         }
         solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
         if (outgoing_size(g, i) == 0) {
-          myaux += damping * score_old[i] / numNodes;
+          #pragma omp atomic
+          aux += damping * score_old[i] / numNodes;
         }
       }
 
-      #pragma omp atomic
-      aux += myaux;
-      #pragma omp barrier
-
-      #pragma omp for schedule(dynamic, chunk_size) nowait
+      #pragma omp for schedule(dynamic, chunk_size) 
       for (int i = 0; i < numNodes; ++i) {
         solution[i] += aux;
         double aux1 = solution[i], aux2 = score_old[i];
         if (aux1 > aux2) {
-          mydiff += aux1 - aux2;
+          #pragma omp atomic
+          global_diff += aux1 - aux2;
         }
         else {
-          mydiff += aux2 - aux1;
+          #pragma omp atomic
+          global_diff += aux2 - aux1;
         }
         score_old[i] = aux1;
       }
 
-      #pragma omp atomic
-      global_diff += mydiff;
-      #pragma omp barrier
     }
 
     converged = (global_diff < convergence);
