@@ -32,7 +32,7 @@ void top_down_step(
     vertex_set* new_frontier,
     int* distances)
 {
-    # pragma omp parallel for schedule(dynamic, (frontier->count + 80 - 1) / 80)
+    # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
     for (int i = 0; i < frontier->count; i++) {
         int node = frontier->vertices[i];
 
