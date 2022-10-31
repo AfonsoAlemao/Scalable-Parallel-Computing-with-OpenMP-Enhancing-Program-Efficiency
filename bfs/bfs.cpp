@@ -197,9 +197,7 @@ void bottom_up_step(
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
-    if (frontier->count == 0) {
-        return;
-    }
+
     int dist_frontier = distances[frontier->vertices[0]];
     // printf("dist_frontier = %d\n", dist_frontier);
 
