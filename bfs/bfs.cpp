@@ -32,12 +32,9 @@ void top_down_step(
     vertex_set* new_frontier,
     int* distances)
 {
-    if (frontier->count == 0) {
-        return;
-    }
     int dist_frontier = distances[frontier->vertices[0]];
-
-    if (frontier->count > 8) {
+    // printf("Frontier count %d\n", frontier->count);
+    if (frontier->count > 800) {
         int count = 0;
         # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
         for (int i = 0; i < frontier->count; i++) {
