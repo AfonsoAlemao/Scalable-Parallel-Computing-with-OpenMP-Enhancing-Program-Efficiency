@@ -230,6 +230,7 @@ void bottom_up_step(
             }
         }
     }
+
     // printf("\n\n");
 }
 
@@ -393,8 +394,6 @@ void bfs_bottom_up(Graph graph, solution* sol)
 #endif
 
         // swap pointers
-        //vertex_set* tmp;
-        //__sync_bool_compare_and_swap ((vertex_set*) tmp, (vertex_set*) frontier, (vertex_set*) new_frontier);
 
         vertex_set* tmp = frontier;
         frontier = new_frontier;
@@ -450,9 +449,6 @@ void bfs_hybrid(Graph graph, solution* sol)
 #endif
 
         // swap pointers
-        //vertex_set* tmp;
-        //__sync_bool_compare_and_swap ((vertex_set*) tmp, (vertex_set*) frontier, (vertex_set*) new_frontier);
-
         vertex_set* tmp = frontier;
         frontier = new_frontier;
         new_frontier = tmp;
