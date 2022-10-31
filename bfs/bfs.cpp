@@ -36,7 +36,7 @@ void top_down_step(
     // printf("Frontier count %d\n", frontier->count);
     if (frontier->count > 1000) {
         int count = 0;
-        # pragma omp parallel for schedule(dynamic, (frontier->count + 24 - 1) / 24)
+        # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
         for (int i = 0; i < frontier->count; i++) {
             int node = frontier->vertices[i];
             
