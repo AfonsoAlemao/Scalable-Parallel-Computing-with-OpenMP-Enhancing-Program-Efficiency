@@ -209,7 +209,7 @@ void bottom_up_step(
             int end_edge = (i == g->num_nodes - 1)
                             ? g->num_edges
                             : g->incoming_starts[i + 1];
-
+            // printf("Numero vizinhos = %d\n", end_edge - start_edge);
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                 int incoming = g->incoming_edges[neighbor];
                 int index = 0;
