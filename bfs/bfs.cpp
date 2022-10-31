@@ -75,7 +75,7 @@ void top_down_step(
 
             // attempt to add all neighbors to the new frontier
             if (end_edge - start_edge > 4) {
-                # pragma omp parallel for schedule(static, 1)
+                # pragma omp parallel for
                 for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                     int outgoing = g->outgoing_edges[neighbor];
                     int index = 0;
@@ -371,7 +371,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
     vertex_set* new_frontier = &list2;
 
     // initialize all nodes to NOT_VISITED
-    # pragma omp parallel for schedule(dynamic, 100)
+    # pragma omp parallel for
     for (int i=0; i<graph->num_nodes; i++)
         sol->distances[i] = NOT_VISITED_MARKER;
 
@@ -422,7 +422,7 @@ void bfs_hybrid(Graph graph, solution* sol)
     vertex_set* new_frontier = &list2;
 
     // initialize all nodes to NOT_VISITED
-    # pragma omp parallel for schedule(dynamic, 100)
+    # pragma omp parallel for
     for (int i=0; i<graph->num_nodes; i++)
         sol->distances[i] = NOT_VISITED_MARKER;
 
