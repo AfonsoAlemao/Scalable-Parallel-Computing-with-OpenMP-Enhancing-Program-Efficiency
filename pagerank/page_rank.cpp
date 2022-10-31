@@ -43,10 +43,11 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   // precision scores are used to avoid underflow for large graphs
 
   int numNodes = num_nodes(g);
-  double equal_prob = 1.0 / numNodes;
-  double *score_old, global_diff = 0, *outgoingsize;
+  double equal_prob = 1.0 / numNodes, partialsum =  (1.0-damping) / numNodes;
+  double *score_old, global_diff = 0, *outgoingsize, *auxiliarvertex, damping_per_numNodes = damping / numNodes;
   score_old = (double*) malloc(sizeof(double) * numNodes);
   outgoingsize = (double*) malloc(sizeof(double) * numNodes);
+  auxiliarvertex = (double*) malloc(sizeof(double) * numNodes);
 
   bool converged = false;
   double aux = 0;
@@ -56,6 +57,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   for (int i = 0; i < numNodes; ++i) {
     score_old[i] = equal_prob;
     outgoingsize[i] = outgoing_size(g, i);
+    auxiliarvertex[i] = score_old[i] / outgoingsize[i];
   }
 
   while (!converged) {
@@ -75,11 +77,12 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         const Vertex* end = incoming_end(g, i);
         for (const Vertex* v = start; v != end; v++) {
           // Edge (i, *v);
-          auxiliar += score_old[*v] / outgoingsize[*v];
+          // auxiliar += score_old[*v] / outgoingsize[*v];
+          auxiliar += auxiliarvertex[*v];
         }
-        solution[i] = (damping * auxiliar) + (1.0-damping) / numNodes;
+        solution[i] = (damping * auxiliar) + partialsum;
         if (outgoingsize[i] == 0) {
-          myaux += damping * score_old[i] / numNodes;
+          myaux += auxiliarvertex[i];
         }
       }
 
@@ -100,6 +103,13 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
           mydiff += aux2 - aux1;
         }
         score_old[i] = aux1;
+        if (outgoingsize[i] == 0) {
+           damping_per_numNodes * score_old[i];
+        }
+        else {
+           auxiliarvertex[i] = score_old[i] / outgoingsize[i];
+        }
+       
       }
 
       #pragma omp atomic
@@ -111,4 +121,5 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   }
   free(score_old);
   free(outgoingsize);
+  free(auxiliarvertex);
 }
