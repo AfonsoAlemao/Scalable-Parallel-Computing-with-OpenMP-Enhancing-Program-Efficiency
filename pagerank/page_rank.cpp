@@ -57,7 +57,12 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
   for (int i = 0; i < numNodes; ++i) {
     score_old[i] = equal_prob;
     outgoingsize[i] = outgoing_size(g, i);
-    auxiliarvertex[i] = score_old[i] / outgoingsize[i];
+    if (outgoingsize[i] == 0) {
+        auxiliarvertex[i] = damping_per_numNodes * score_old[i];
+    }
+    else {
+        auxiliarvertex[i] = score_old[i] / outgoingsize[i];
+    }
   }
 
   while (!converged) {
@@ -104,7 +109,7 @@ void pageRank(Graph g, double* solution, double damping, double convergence)
         }
         score_old[i] = aux1;
         if (outgoingsize[i] == 0) {
-           damping_per_numNodes * score_old[i];
+           auxiliarvertex[i] = damping_per_numNodes * score_old[i];
         }
         else {
            auxiliarvertex[i] = score_old[i] / outgoingsize[i];
