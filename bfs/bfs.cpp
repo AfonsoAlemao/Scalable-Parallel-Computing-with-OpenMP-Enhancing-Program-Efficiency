@@ -30,7 +30,7 @@ void top_down_step(
     Graph g,
     vertex_set* frontier,
     vertex_set* new_frontier,
-    int* distances, int* outgoing_size, int* outgoing_starts)
+    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges)
 {
     int dist_frontier = distances[frontier->vertices[0]];
     int numNodes = g->num_nodes;
@@ -46,7 +46,7 @@ void top_down_step(
             // printf("Tou no vertice %d\n", node);
             int start_edge = outgoing_starts[node];
             int end_edge = (node == numNodes - 1)
-                            ? g->num_edges
+                            ? numEdges
                             : outgoing_starts[node + 1];
                             
             // attempt to add all neighbors to the new frontier
@@ -81,7 +81,7 @@ void top_down_step(
             // printf("Tou no vertice %d\n", node);
             int start_edge = outgoing_starts[node];
             int end_edge = (node == numNodes - 1)
-                            ? g->num_edges
+                            ? numEdges
                             : outgoing_starts[node + 1];
                             
             // attempt to add all neighbors to the new frontier
@@ -142,6 +142,7 @@ void top_down_step(
 void bfs_top_down(Graph graph, solution* sol) {
 
     int numNodes = graph->num_nodes;
+    int numEdges = graph->num_edges;
     vertex_set list1;
     vertex_set list2;
     vertex_set_init(&list1, numNodes);
@@ -174,7 +175,7 @@ void bfs_top_down(Graph graph, solution* sol) {
 
         vertex_set_clear(new_frontier);
 
-        top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts);
+        top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts, numEdges);
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
@@ -225,7 +226,7 @@ void bottom_up_step(
     Graph g,
     vertex_set* frontier,
     vertex_set* new_frontier,
-    int* distances)
+    int* distances, int numEdges)
 {
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
@@ -241,7 +242,7 @@ void bottom_up_step(
         if (distances[i] == NOT_VISITED_MARKER) {
             int start_edge = g->incoming_starts[i];
             int end_edge = (i == numNodes - 1)
-                            ? g->num_edges
+                            ? numEdges
                             : g->incoming_starts[i + 1];
             // printf("Numero vizinhos = %d\n", end_edge - start_edge);
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
@@ -398,6 +399,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
     // code by creating subroutine bottom_up_step() that is called in
     // each step of the BFS process.
     int numNodes = graph->num_nodes;
+    int numEdges = graph->num_edges;
 
     vertex_set list1;
     vertex_set list2;
@@ -424,7 +426,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
 
         vertex_set_clear(new_frontier);
 
-        bottom_up_step(graph, frontier, new_frontier, sol->distances);
+        bottom_up_step(graph, frontier, new_frontier, sol->distances, numEdges);
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
@@ -449,6 +451,7 @@ void bfs_hybrid(Graph graph, solution* sol)
     // You will need to implement the "hybrid" BFS here as
     // described in the handout.
     int numNodes = graph->num_nodes;
+    int numEdges = graph->num_edges;
 
     vertex_set list1;
     vertex_set list2;
@@ -484,10 +487,10 @@ void bfs_hybrid(Graph graph, solution* sol)
         // Top down complexity: number of frontier nodes
         // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
         if (frontier->count * frontier->count > numNodes) {
-            bottom_up_step(graph, frontier, new_frontier, sol->distances);
+            bottom_up_step(graph, frontier, new_frontier, sol->distances, numEdges);
         }
         else {
-            top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts);
+            top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts, numEdges);
         }
 
 #ifdef VERBOSE
