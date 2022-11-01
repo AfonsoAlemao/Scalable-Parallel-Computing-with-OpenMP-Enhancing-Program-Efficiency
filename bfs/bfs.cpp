@@ -33,80 +33,72 @@ void top_down_step(
     int* distances)
 {
     int dist_frontier = distances[frontier->vertices[0]];
+    int numNodes = g->num_nodes;
+
+
     // printf("Frontier count %d\n", frontier->count);
     if (frontier->count > 1000) {
-        int count = 0;
         # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
         for (int i = 0; i < frontier->count; i++) {
             int node = frontier->vertices[i];
-            
+            // printf("Tou no vertice %d\n", i);
             int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
+            int end_edge = (node == numNodes - 1)
                             ? g->num_edges
                             : g->outgoing_starts[node + 1];
 
             // attempt to add all neighbors to the new frontier
+            // printf("Os meus vizinhos:\n");
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                 int outgoing = g->outgoing_edges[neighbor];
                 int index = 0;
+                // printf("%d\n", outgoing);
 
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {                
-                    # pragma omp critical 
-                    {
-                    index = count++;
-                    // index = new_frontier->count++;
-                    }
-
-                    new_frontier->vertices[index] = outgoing;
-                }
-                
+                __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
             }
         }
-        new_frontier->count = count; 
     }
     else {
         for (int i = 0; i < frontier->count; i++) {
             int node = frontier->vertices[i];
-            
+            // printf("Tou no vertice %d\n", i);
             int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
+            int end_edge = (node == numNodes - 1)
                             ? g->num_edges
                             : g->outgoing_starts[node + 1];
 
             // attempt to add all neighbors to the new frontier
+            // printf("Os meus vizinhos:\n");
             if (end_edge - start_edge > 4) {
                 # pragma omp parallel for
                 for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                     int outgoing = g->outgoing_edges[neighbor];
                     int index = 0;
+                    // printf("%d\n", outgoing);
 
-                    if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                        distances[outgoing] = dist_frontier + 1;
-
-                        #pragma omp critical 
-                        {
-                            index = new_frontier->count++;
-                        }
-
-                        new_frontier->vertices[index] = outgoing;
-                    }
+                    __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
                 }
             }
             else {
                 for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                     int outgoing = g->outgoing_edges[neighbor];
                     int index = 0;
+                    // printf("%d\n", outgoing);
 
-                    if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                        distances[outgoing] = dist_frontier + 1;
-                        index = new_frontier->count++;
-
-                        new_frontier->vertices[index] = outgoing;
-                    }
+                    __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
                 }
             }
         }
     }
+
+    int index = 0;
+    for (int k = 0; k < numNodes; k++) {
+        if (distances[k] == dist_frontier + 1) {
+            index = new_frontier->count++;
+            new_frontier->vertices[index] = k;
+        }
+    }
+
     // printf("Frontier count = %d\n", frontier->count);
 }
 
@@ -200,6 +192,7 @@ void bottom_up_step(
 
     int dist_frontier = distances[frontier->vertices[0]];
     // printf("dist_frontier = %d\n", dist_frontier);
+    int count = 0;
 
     # pragma omp parallel for schedule(dynamic, (num_nodes(g) + 8000 - 1) / 8000)
     for (int i = 0; i < num_nodes(g); i++) {
@@ -220,7 +213,7 @@ void bottom_up_step(
                     
                     # pragma omp critical 
                     {
-                        index += new_frontier->count++;
+                        index += count++;
                     }
 
                     new_frontier->vertices[index] = i;
@@ -230,6 +223,8 @@ void bottom_up_step(
             }
         }
     }
+
+    new_frontier->count = count;
 
     // printf("\n\n");
 }
