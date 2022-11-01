@@ -91,16 +91,25 @@ void top_down_step(
         }
     }
 
-    
-    # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
-    for (int k = 0; k < numNodes; k++) {
-        if (distances[k] == dist_frontier + 1) {
-            int index = 0;
-            #pragma omp critical 
-            {
-                index = new_frontier->count++;
+    if (frontier->count > 1000) {
+        # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
+        for (int k = 0; k < numNodes; k++) {
+            if (distances[k] == dist_frontier + 1) {
+                int index = 0;
+                #pragma omp critical 
+                {
+                    index = new_frontier->count++;
+                }
+                new_frontier->vertices[index] = k;
             }
-            new_frontier->vertices[index] = k;
+        }
+    }
+    else {
+        for (int k = 0; k < numNodes; k++) {
+            if (distances[k] == dist_frontier + 1) {
+                int index = new_frontier->count++;
+                new_frontier->vertices[index] = k;
+            }
         }
     }
 
