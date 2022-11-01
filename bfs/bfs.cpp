@@ -92,7 +92,7 @@ void top_down_step(
     }
 
     
-    # pragma omp parallel for schedule(dynamic, (frontier->count + 800 - 1) / 800)
+    # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
     for (int k = 0; k < numNodes; k++) {
         if (distances[k] == dist_frontier + 1) {
             int index = 0;
