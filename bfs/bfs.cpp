@@ -54,7 +54,14 @@ void top_down_step(
                 int index = 0;
                 // printf("%d\n", outgoing);
 
-                __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
+                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                    int index = 0;
+                    #pragma omp critical 
+                    {
+                        index = new_frontier->count++;
+                    }
+                    new_frontier->vertices[index] = outgoing;
+                }
             }
         }
     }
@@ -76,7 +83,14 @@ void top_down_step(
                     int index = 0;
                     // printf("%d\n", outgoing);
 
-                    __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
+                    if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                        int index = 0;
+                        #pragma omp critical 
+                        {
+                            index = new_frontier->count++;
+                        }
+                        new_frontier->vertices[index] = outgoing;
+                    }
                 }
             }
             else {
@@ -85,14 +99,21 @@ void top_down_step(
                     int index = 0;
                     // printf("%d\n", outgoing);
 
-                    __sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1);
+                    if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                        int index = 0;
+                        #pragma omp critical 
+                        {
+                            index = new_frontier->count++;
+                        }
+                        new_frontier->vertices[index] = outgoing;
+                    }
                 }
             }
         }
     }
 
-    if (numNodes > 10000) {
-        # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
+    /*if (numNodes > 10000) {
+        # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
         for (int k = 0; k < numNodes; k++) {
             if (distances[k] == dist_frontier + 1) {
                 int index = 0;
@@ -111,7 +132,7 @@ void top_down_step(
                 new_frontier->vertices[index] = k;
             }
         }
-    }
+    }*/
 
     // printf("Frontier count = %d\n", frontier->count);
 }
