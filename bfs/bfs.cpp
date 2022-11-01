@@ -116,8 +116,11 @@ void top_down_step(
         for (int j = 0; j < counters[i]; j++) {
             new_frontier->vertices[new_frontier->count++] = frontiers[i][j];
         }
+        free(frontiers[i]);
     }
 
+    free(frontiers);
+    free(counters);
     /*if (numNodes > 10000) {
         # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
         for (int k = 0; k < numNodes; k++) {
