@@ -92,7 +92,8 @@ void top_down_step(
                 int index = 0;
                 // printf("%d\n", outgoing);
 
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                if (distances[outgoing] == NOT_VISITED_MARKER) {
+                    distances[outgoing] = dist_frontier + 1;
                     myfrontiers[mycount++] = outgoing;
                     // printf("counters[%d] = %d\n", i, counters[i]);
                     // printf("Adicionei %d-%d\n", node, outgoing);
@@ -101,10 +102,10 @@ void top_down_step(
 
             for (int j = 0; j < mycount; j++) {
                 // printf("Adicionei na new frontier %d-%d\n", frontier->vertices[i], frontiers[i][j]);
-                #pragma omp critical
-                {
-                    new_frontier->vertices[new_frontier->count++] = myfrontiers[j];
-                }
+                //#pragma omp critical
+                //{
+                new_frontier->vertices[new_frontier->count++] = myfrontiers[j];
+                //}
             }
         }
     }
