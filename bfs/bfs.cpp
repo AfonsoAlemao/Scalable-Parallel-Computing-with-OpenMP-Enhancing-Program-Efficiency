@@ -38,7 +38,7 @@ void top_down_step(
 
     //printf("Frontier count %d\n", frontier_count);
     if (frontier_count > 1000) {
-        # pragma omp parallel for schedule(dynamic, (frontier_count + 80 - 1) / 80)
+        # pragma omp parallel for schedule(dynamic, (frontier_count + 8000 - 1) / 8000)
         for (int i = 0; i < frontier_count; i++) {
             int outgoing_size_frontier = outgoing_size[frontier->vertices[i]];
             if (outgoing_size_frontier) {
@@ -195,6 +195,8 @@ void bfs_top_down(Graph graph, solution* sol) {
         new_frontier = tmp;
     }
 
+    free(outgoingsize);
+    free(outgoingstarts);
     free(list1.vertices);
     free(list2.vertices);
 }
@@ -242,7 +244,7 @@ void bottom_up_step(
     // printf("dist_frontier = %d\n", dist_frontier);
     int count = 0;
 
-    # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
+    # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
     for (int i = 0; i < numNodes; i++) {
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
@@ -509,6 +511,9 @@ void bfs_hybrid(Graph graph, solution* sol)
         frontier = new_frontier;
         new_frontier = tmp;
     }
+
+    free(outgoingsize);
+    free(outgoingstarts);
 
     free(list1.vertices);
     free(list2.vertices);
