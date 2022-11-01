@@ -38,11 +38,11 @@ void top_down_step(
 
     //printf("Frontier count %d\n", frontier_count);
     if (frontier_count > 1000) {
-        # pragma omp parallel for schedule(dynamic, (frontier_count + 8000 - 1) / 8000)
+        # pragma omp parallel for schedule(dynamic, (frontier_count + 80 - 1) / 80)
         for (int i = 0; i < frontier_count; i++) {
             int outgoing_size_frontier = outgoing_size[frontier->vertices[i]];
             if (outgoing_size_frontier) {
-                int myfrontiers[outgoing_size[frontier->vertices[i]]];
+                int myfrontiers[outgoing_size_frontier];
                 int mycount = 0;
                 int node = frontier->vertices[i];
                 // printf("Tou no vertice %d\n", node);
@@ -242,7 +242,7 @@ void bottom_up_step(
     // printf("dist_frontier = %d\n", dist_frontier);
     int count = 0;
 
-    # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
+    # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
     for (int i = 0; i < numNodes; i++) {
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
@@ -255,7 +255,7 @@ void bottom_up_step(
                 int incoming = g->incoming_edges[neighbor];
                 int index = 0;
                 // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
-                if(distances[incoming] == dist_frontier) {
+                if (distances[incoming] == dist_frontier) {
                     // printf("Adicionei ligacao %d-%d\n", i, incoming);
                     distances[i] = dist_frontier + 1;    
                     
