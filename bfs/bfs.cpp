@@ -38,7 +38,7 @@ void top_down_step(
 
 
     //printf("Frontier count %d\n", frontier->count);
-    //if (frontier->count > 1000) {
+    if (frontier->count > 1000) {
         # pragma omp parallel for schedule(dynamic, (frontier->count + 8000 - 1) / 8000)
         for (int i = 0; i < frontier->count; i++) {
             int myfrontiers[outgoing_size(g, frontier->vertices[i])];
@@ -73,16 +73,18 @@ void top_down_step(
             }
         }
 
-    /*}
+    }
     else {
         for (int i = 0; i < frontier->count; i++) {
+            int myfrontiers[outgoing_size(g, frontier->vertices[i])];
+            int mycount = 0;
             int node = frontier->vertices[i];
             // printf("Tou no vertice %d\n", node);
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == numNodes - 1)
                             ? g->num_edges
                             : g->outgoing_starts[node + 1];
-
+                            
             // attempt to add all neighbors to the new frontier
             // printf("Os meus vizinhos:\n");
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
@@ -91,16 +93,21 @@ void top_down_step(
                 // printf("%d\n", outgoing);
 
                 if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                    #pragma omp critical
-                    {
-                        frontiers[i][counters[i]++] = outgoing;
-                    }
+                    myfrontiers[mycount++] = outgoing;
                     // printf("counters[%d] = %d\n", i, counters[i]);
                     // printf("Adicionei %d-%d\n", node, outgoing);
                 }
             }
+
+            for (int j = 0; j < mycount; j++) {
+                // printf("Adicionei na new frontier %d-%d\n", frontier->vertices[i], frontiers[i][j]);
+                #pragma omp critical
+                {
+                    new_frontier->vertices[new_frontier->count++] = myfrontiers[j];
+                }
+            }
         }
-    }*/
+    }
     
 
     /*if (numNodes > 10000) {
