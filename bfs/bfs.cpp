@@ -225,16 +225,16 @@ void bottom_up_step(
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
 
-    int dist_frontier = distances[frontier->vertices[0]];
+    int dist_frontier = distances[frontier->vertices[0]], numNodes = g->num_nodes;
     // printf("dist_frontier = %d\n", dist_frontier);
     int count = 0;
 
-    # pragma omp parallel for schedule(dynamic, (num_nodes(g) + 8000 - 1) / 8000)
-    for (int i = 0; i < num_nodes(g); i++) {
+    # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
+    for (int i = 0; i < numNodes; i++) {
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
             int start_edge = g->incoming_starts[i];
-            int end_edge = (i == g->num_nodes - 1)
+            int end_edge = (i == numNodes - 1)
                             ? g->num_edges
                             : g->incoming_starts[i + 1];
             // printf("Numero vizinhos = %d\n", end_edge - start_edge);
