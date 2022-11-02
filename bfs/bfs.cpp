@@ -36,8 +36,8 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
-        # pragma omp parallel for schedule(dynamic, 8000)
+    if (*search_max_in_frontier - *search_min_in_frontier > 1000) {
+        # pragma omp parallel for schedule(dynamic, (*search_max_in_frontier - *search_min_in_frontier + 8000 - 1) / 8000)
         for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             int mycount = 0;
             int my_max = -1;
@@ -94,7 +94,7 @@ bool top_down_step(
         }
     }
     else {
-        for (int i = 0; i <= *search_max_in_frontier; i++) {
+        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             if (distances[i] == dist_frontier) {
                 if (outgoing_size[i]) {
                     int start_edge = outgoing_starts[i];
@@ -242,37 +242,68 @@ bool bottom_up_step(
     bool have_new_frontier = false;
     int new_frontier_count = 0;
 
-    # pragma omp parallel for schedule(dynamic, 8000)
-    for (int i = min; i <= max; i++) {
-        int mycount = 0;
-        // printf("Tou no vertice %d\n", i);
-        if (distances[i] == NOT_VISITED_MARKER) {
-            int start_edge = g->incoming_starts[i];
-            int end_edge = (i == numNodes - 1)
-                            ? numEdges
-                            : g->incoming_starts[i + 1];
-            // printf("Numero vizinhos = %d\n", end_edge - start_edge);
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int incoming = g->incoming_edges[neighbor];
+    if (max - min > 1000) {
+        # pragma omp parallel for schedule(dynamic, (max - min + 8000 - 1) / 8000)
+        for (int i = min; i <= max; i++) {
+            int mycount = 0;
+            // printf("Tou no vertice %d\n", i);
+            if (distances[i] == NOT_VISITED_MARKER) {
+                int start_edge = g->incoming_starts[i];
+                int end_edge = (i == numNodes - 1)
+                                ? numEdges
+                                : g->incoming_starts[i + 1];
+                // printf("Numero vizinhos = %d\n", end_edge - start_edge);
+                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                    int incoming = g->incoming_edges[neighbor];
 
-                // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
-                if (distances[incoming] == dist_frontier) {
-                    // printf("Adicionei %d\n", incoming);
-                    distances[i] = dist_frontier + 1; 
-                    
-                    have_new_frontier = true;
+                    // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
+                    if (distances[incoming] == dist_frontier) {
+                        // printf("Adicionei %d\n", incoming);
+                        distances[i] = dist_frontier + 1; 
+                        
+                        have_new_frontier = true;
 
-                    if (*frontier_count != -1) {
-                        mycount++;
+                        if (*frontier_count != -1) {
+                            mycount++;
+                        }
+                        break;
                     }
-                    break;
+                }
+            }
+            if (*frontier_count != -1) {
+                if (mycount > 0) {
+                    #pragma omp atomic
+                    new_frontier_count += mycount;
                 }
             }
         }
-        if (*frontier_count != -1) {
-            if (mycount > 0) {
-                #pragma omp atomic
-                new_frontier_count += mycount;
+    }
+    else {
+        for (int i = min; i <= max; i++) {
+            int mycount = 0;
+            // printf("Tou no vertice %d\n", i);
+            if (distances[i] == NOT_VISITED_MARKER) {
+                int start_edge = g->incoming_starts[i];
+                int end_edge = (i == numNodes - 1)
+                                ? numEdges
+                                : g->incoming_starts[i + 1];
+                // printf("Numero vizinhos = %d\n", end_edge - start_edge);
+                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                    int incoming = g->incoming_edges[neighbor];
+
+                    // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
+                    if (distances[incoming] == dist_frontier) {
+                        // printf("Adicionei %d\n", incoming);
+                        distances[i] = dist_frontier + 1; 
+                        
+                        have_new_frontier = true;
+
+                        if (*frontier_count != -1) {
+                            new_frontier_count++;
+                        }
+                        break;
+                    }
+                }
             }
         }
     }
