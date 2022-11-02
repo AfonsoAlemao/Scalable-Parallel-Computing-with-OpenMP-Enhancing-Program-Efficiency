@@ -157,11 +157,11 @@ bool top_down_step_dense(
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
     int *search_max_in_frontier, int *search_min_in_frontier)
 {
-    printf("%d\n", *search_max_in_frontier);
+    // printf("%d\n", *search_max_in_frontier);
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    int chunk_size = (numNodes + 8000 - 1) / 8000;
+    int chunk_size = (numNodes + 6400 - 1) / 6400;
     #pragma omp parallel
     {
         int mycount = 0;
