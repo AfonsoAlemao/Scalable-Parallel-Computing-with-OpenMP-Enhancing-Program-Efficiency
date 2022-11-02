@@ -238,7 +238,7 @@ bool bottom_up_step(
     // printf("dist_frontier = %d\n", dist_frontier);
     bool have_new_frontier = false;
 
-    # pragma omp for
+    # pragma omp for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
     for (int i = 0; i < numNodes; i++) {
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
