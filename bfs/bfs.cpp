@@ -39,22 +39,28 @@ bool top_down_step(
     int chunk_size = 8000;
 
     if ( (search_max_in_frontier - search_min_in_frontier) < 400){
-        chunk_size = 8;
+        chunk_size = 50;
     }
     else if((search_max_in_frontier - search_min_in_frontier) < 800){
-        chunk_size = 40;
+        chunk_size = 100;
+    }
+    else if((search_max_in_frontier - search_min_in_frontier) < 4000){
+        chunk_size = 500;
     }
     else if((search_max_in_frontier - search_min_in_frontier) < 8000){
         chunk_size = 800;
     }
     else if((search_max_in_frontier - search_min_in_frontier) < 16000){
-        chunk_size = 2000;
+        chunk_size = 1500;
     }
     else if((search_max_in_frontier - search_min_in_frontier) < 32000){
         chunk_size = 4000;
     }
-    else{
+    else if((search_max_in_frontier - search_min_in_frontier) < 64000){
         chunk_size = 8000;
+    }
+    else{
+        chunk_size = 16000;
     }
     //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
