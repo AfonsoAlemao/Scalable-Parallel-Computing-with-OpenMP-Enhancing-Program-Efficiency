@@ -247,7 +247,7 @@ bool bottom_up_step(
         # pragma omp parallel
         {
             int mycount = 0;
-            # pragma omp for schedule(dynamic, chunk_size)
+            # pragma omp for schedule(dynamic, chunk_size) nowait
             for (int i = min; i <= max; i++) {
                 // printf("Tou no vertice %d\n", i);
                 if (distances[i] == NOT_VISITED_MARKER) {
