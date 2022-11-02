@@ -231,7 +231,7 @@ void bfs_top_down(Graph graph, solution* sol) {
 
 // return frontier_count
 bool bottom_up_step(
-    Graph g, int* distances, int numEdges, int dist_frontier, int *frontier_count)
+    Graph g, int* distances, int numEdges, int dist_frontier, int *frontier_count, int min, int max)
 {
     /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
@@ -243,7 +243,7 @@ bool bottom_up_step(
     int new_frontier_count = 0;
 
     # pragma omp parallel for schedule(dynamic, 8000)
-    for (int i = 0; i < numNodes; i++) {
+    for (int i = min; i < max; i++) {
         int mycount = 0;
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
@@ -299,6 +299,8 @@ void bfs_bottom_up(Graph graph, solution* sol)
     // each step of the BFS process.
     int numNodes = graph->num_nodes, numEdges = graph->num_edges;
     int frontier_count = 1, distance_frontier = 0, flag = -1;
+    int max = numNodes, min = 1;
+
     bool have_new_frontier = true;
     // initialize all nodes to NOT_VISITED
     # pragma omp parallel for
@@ -315,13 +317,30 @@ void bfs_bottom_up(Graph graph, solution* sol)
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_frontier, &flag);
+        have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_frontier, &flag, min, max);
         distance_frontier++;
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
 #endif
+        for (int i = min; i < max; i++) {
+            if (sol->distances[i] == NOT_VISITED_MARKER) {
+                min++;
+            }
+            else {
+                break;
+            }
+        }
+
+        for (int i = max; i > min; i--) {
+            if (sol->distances[i] == NOT_VISITED_MARKER) {
+                max--;
+            }
+            else {
+                break;
+            }
+        }
 
     }
 
@@ -335,6 +354,7 @@ void bfs_hybrid(Graph graph, solution* sol)
     // described in the handout.
     int numNodes = graph->num_nodes, frontier_count = 1;
     int numEdges = graph->num_edges, dist_frontier = 0; 
+    int max = numNodes, min = 1;
     bool have_new_frontier = true;
     int search_max_in_frontier = 0, search_min_in_frontier = 0;
     
@@ -362,7 +382,7 @@ void bfs_hybrid(Graph graph, solution* sol)
         // Top down complexity: number of frontier nodes
         // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
         if (frontier_count > numNodes / 8) {
-            have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier, &frontier_count);
+            have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier, &frontier_count, min, max);
             search_max_in_frontier = numNodes;
             search_min_in_frontier = 0;
         }
