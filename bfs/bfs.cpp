@@ -33,7 +33,7 @@ bool top_down_step(
     int numNodes = g->num_nodes;
     bool have_new_frontier = false;
 
-    # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
+    # pragma omp parallel for schedule(dynamic, 8000)
     for (int i = 0; i < numNodes; i++) {
         if (distances[i] == dist_frontier) {
             if (outgoing_size[i]) {
@@ -164,7 +164,7 @@ bool bottom_up_step(
     // printf("dist_frontier = %d\n", dist_frontier);
     bool have_new_frontier = false;
 
-    # pragma omp parallel for schedule(dynamic, (numNodes + 800 - 1) / 800)
+    # pragma omp parallel for schedule(dynamic, 8000)
     for (int i = 0; i < numNodes; i++) {
         // printf("Tou no vertice %d\n", i);
         if (distances[i] == NOT_VISITED_MARKER) {
