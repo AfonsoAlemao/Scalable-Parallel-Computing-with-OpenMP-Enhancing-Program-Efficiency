@@ -29,17 +29,19 @@ void vertex_set_init(vertex_set* list, int count) {
 // frontier_count is != -1 for hybrid mode
 bool top_down_step(
     Graph g,
-    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges, int dist_frontier, int *frontier_count, int *search_max_in_frontier)
+    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges, int dist_frontier, int *frontier_count, 
+    int *search_max_in_frontier, int *search_min_in_frontier)
 {
     // printf("%d\n", *search_max_in_frontier);
-    int numNodes = g->num_nodes, max = -1;
+    int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    if (*search_max_in_frontier > 8000) {
+    if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         # pragma omp parallel for schedule(dynamic, 8000)
-        for (int i = 0; i <= *search_max_in_frontier; i++) {
+        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             int mycount = 0;
             int my_max = -1;
+            int my_min = numNodes + 1;
             if (distances[i] == dist_frontier) {
                 if (outgoing_size[i]) {
                     int start_edge = outgoing_starts[i];
@@ -60,6 +62,9 @@ bool top_down_step(
                             if (outgoing > my_max) {
                                 my_max = outgoing;
                             }
+                            if (outgoing < my_min) {
+                                my_min = outgoing;
+                            }
                         }
                     }
                 }
@@ -75,6 +80,14 @@ bool top_down_step(
                 {
                     if (my_max > max) {
                         max = my_max;
+                    }
+                }
+            }
+            if (my_min < min) {
+                #pragma omp critical
+                {
+                    if (my_min < min) {
+                        min = my_min;
                     }
                 }
             }
@@ -103,6 +116,9 @@ bool top_down_step(
                             if (outgoing > max) {
                                 max = outgoing;
                             }
+                            if (outgoing < min) {
+                                min = outgoing;
+                            }
                         }
                     }
                 }
@@ -112,6 +128,7 @@ bool top_down_step(
 
     *frontier_count = new_frontier_count;
     *search_max_in_frontier = max;
+    *search_min_in_frontier = min;
 
     return have_new_frontier;
     
@@ -154,7 +171,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     int *outgoingsize, *outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
     outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
-    int search_max_in_frontier = 0;
+    int search_max_in_frontier = 0, search_min_in_frontier = 0;
 
     // initialize all nodes to NOT_VISITED
     # pragma omp parallel for
@@ -173,7 +190,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &flag, &search_max_in_frontier);
+        have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &flag, &search_max_in_frontier, &search_min_in_frontier);
         dist_frontier++;
 
 #ifdef VERBOSE
@@ -319,7 +336,7 @@ void bfs_hybrid(Graph graph, solution* sol)
     int numNodes = graph->num_nodes, frontier_count = 1;
     int numEdges = graph->num_edges, dist_frontier = 0; 
     bool have_new_frontier = true;
-    int search_max_in_frontier = 0;
+    int search_max_in_frontier = 0, search_min_in_frontier = 0;
     
     int *outgoingsize, *outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
@@ -347,9 +364,10 @@ void bfs_hybrid(Graph graph, solution* sol)
         if (frontier_count > numNodes / 8) {
             have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier, &frontier_count);
             search_max_in_frontier = numNodes;
+            search_min_in_frontier = 0;
         }
         else {
-            have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier);
+            have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier, &search_min_in_frontier);
         }
         dist_frontier++;
 
