@@ -161,7 +161,7 @@ bool top_down_step_dense(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    int chunk_size = (numNodes + 6400 - 1) / 6400;
+    int chunk_size = (numNodes + 8000 - 1) / 8000;
     #pragma omp parallel
     {
         int mycount = 0;
