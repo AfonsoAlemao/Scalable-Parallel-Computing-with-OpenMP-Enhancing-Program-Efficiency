@@ -29,7 +29,7 @@ void vertex_set_init(vertex_set* list, int count) {
 // frontier_count is != -1 for hybrid mode
 bool top_down_step(
     Graph g,
-    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges, int dist_frontier, int *frontier_count, 
+    int* distances, int* outgoing_size, int numEdges, int dist_frontier, int *frontier_count, 
     int *search_max_in_frontier, int *search_min_in_frontier)
 {
     // printf("%d\n", *search_max_in_frontier);
@@ -44,10 +44,10 @@ bool top_down_step(
             int my_min = numNodes + 1;
             if (distances[i] == dist_frontier) {
                 if (outgoing_size[i]) {
-                    int start_edge = outgoing_starts[i];
+                    int start_edge = g->outgoing_starts[i];
                     int end_edge = (i == numNodes - 1)
                                     ? numEdges
-                                    : outgoing_starts[i + 1];
+                                    : g->outgoing_starts[i + 1];
                                     
                     // attempt to add all neighbors to the new frontier
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
@@ -97,10 +97,10 @@ bool top_down_step(
         for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             if (distances[i] == dist_frontier) {
                 if (outgoing_size[i]) {
-                    int start_edge = outgoing_starts[i];
+                    int start_edge = g->outgoing_starts[i];
                     int end_edge = (i == numNodes - 1)
                                     ? numEdges
-                                    : outgoing_starts[i + 1];
+                                    : g->outgoing_starts[i + 1];
                                     
                     // attempt to add all neighbors to the new frontier
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
@@ -168,9 +168,10 @@ void bfs_top_down(Graph graph, solution* sol) {
     int numNodes = graph->num_nodes;
     int numEdges = graph->num_edges, dist_frontier = 0, flag = -1;
     bool have_new_frontier = true;
-    int *outgoingsize, *outgoingstarts;
+    int *outgoingsize;
+    //*outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
-    outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
+    //outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
     int search_max_in_frontier = 0, search_min_in_frontier = 0;
 
     // initialize all nodes to NOT_VISITED
@@ -178,7 +179,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;
         outgoingsize[i] = outgoing_size(graph, i);
-        outgoingstarts[i] = graph->outgoing_starts[i];
+        //outgoingstarts[i] = graph->outgoing_starts[i];
     }
 
     // setup frontier with the root node
@@ -190,7 +191,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &flag, &search_max_in_frontier, &search_min_in_frontier);
+        have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, numEdges, dist_frontier, &flag, &search_max_in_frontier, &search_min_in_frontier);
         dist_frontier++;
 
 #ifdef VERBOSE
@@ -201,7 +202,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     }
 
     free(outgoingsize);
-    free(outgoingstarts);
+    //free(outgoingstarts);
 }
 
 /**************************************************************************************
@@ -391,16 +392,17 @@ void bfs_hybrid(Graph graph, solution* sol)
     bool have_new_frontier = true;
     int search_max_in_frontier = 0, search_min_in_frontier = 0;
     
-    int *outgoingsize, *outgoingstarts;
+    int *outgoingsize;
+    // *outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
-    outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
+    //outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
 
     // initialize all nodes to NOT_VISITED
     # pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;
         outgoingsize[i] = outgoing_size(graph, i);
-        outgoingstarts[i] = graph->outgoing_starts[i];
+        //outgoingstarts[i] = graph->outgoing_starts[i];
     }
 
     // setup frontier with the root node
@@ -420,7 +422,7 @@ void bfs_hybrid(Graph graph, solution* sol)
             search_min_in_frontier = 0;
         }
         else {
-            have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier, &search_min_in_frontier);
+            have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier, &search_min_in_frontier);
         }
         dist_frontier++;
 
@@ -432,5 +434,5 @@ void bfs_hybrid(Graph graph, solution* sol)
     }
 
     free(outgoingsize);
-    free(outgoingstarts);
+    //free(outgoingstarts);
 }
