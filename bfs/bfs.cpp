@@ -36,7 +36,7 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
+    //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
         {
             int mycount = 0;
@@ -93,9 +93,9 @@ bool top_down_step(
             }
         }
 
-    }
+    //}
         
-    else {
+    /* else {
         for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             if (distances[i] == dist_frontier) {
                 if (outgoing_size[i]) {
@@ -126,7 +126,7 @@ bool top_down_step(
                 }
             }
         }
-    }
+    }*/
 
     *frontier_count = new_frontier_count;
     *search_max_in_frontier = max;
