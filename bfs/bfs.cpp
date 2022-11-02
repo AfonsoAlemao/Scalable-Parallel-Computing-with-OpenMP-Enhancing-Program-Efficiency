@@ -36,7 +36,7 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    int chunk_size = 8000;
+    int chunk_size = (*search_max_in_frontier - *search_min_in_frontier + 6400 - 1) / 6400;
     //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
         {
@@ -44,7 +44,7 @@ bool top_down_step(
             int my_max = -1;
             int my_min = numNodes + 1;
             
-            # pragma omp for schedule(dynamic,chunk_size) nowait
+            # pragma omp for schedule(dynamic, chunk_size) nowait
             for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
                 
                 if (distances[i] == dist_frontier) {
