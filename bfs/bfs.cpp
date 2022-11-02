@@ -26,94 +26,36 @@ void vertex_set_init(vertex_set* list, int count) {
 // Take one step of "top-down" BFS.  For each vertex on the frontier,
 // follow all outgoing edges, and add all neighboring vertices to the
 // new_frontier.
-void top_down_step(
+bool top_down_step(
     Graph g,
-    vertex_set* frontier,
-    vertex_set* new_frontier,
-    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges)
+    int* distances, int* outgoing_size, int* outgoing_starts, int numEdges, int dist_frontier)
 {
-    int dist_frontier = distances[frontier->vertices[0]];
     int numNodes = g->num_nodes;
-    int frontier_count = frontier->count;
+    bool have_new_frontier = false;
 
-    //printf("Frontier count %d\n", frontier_count);
-    if (frontier_count > 1000) {
-        # pragma omp parallel for schedule(dynamic, (frontier_count + 8000 - 1) / 8000)
-        for (int i = 0; i < frontier_count; i++) {
-            int outgoing_size_frontier = outgoing_size[frontier->vertices[i]];
-            if (outgoing_size_frontier) {
-                int myfrontiers[outgoing_size_frontier];
-                int mycount = 0;
-                int node = frontier->vertices[i];
-                // printf("Tou no vertice %d\n", node);
-                int start_edge = outgoing_starts[node];
-                int end_edge = (node == numNodes - 1)
+    # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
+    for (int i = 0; i < numNodes; i++) {
+        if (distances[i] == dist_frontier) {
+            if (outgoing_size[i]) {
+                int start_edge = outgoing_starts[i];
+                int end_edge = (i == numNodes - 1)
                                 ? numEdges
-                                : outgoing_starts[node + 1];
+                                : outgoing_starts[i + 1];
                                 
                 // attempt to add all neighbors to the new frontier
-                // printf("Os meus vizinhos:\n");
                 for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                     int outgoing = g->outgoing_edges[neighbor];
-                    int index = 0;
-                    // printf("%d\n", outgoing);
 
                     if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                        myfrontiers[mycount++] = outgoing;
-                        // printf("counters[%d] = %d\n", i, counters[i]);
-                        // printf("Adicionei %d-%d\n", node, outgoing);
-                    }
-                }
-
-                for (int j = 0; j < mycount; j++) {
-                    // printf("Adicionei na new frontier %d-%d\n", frontier->vertices[i], frontiers[i][j]);
-                    #pragma omp critical
-                    {
-                        new_frontier->vertices[new_frontier->count++] = myfrontiers[j];
+                        have_new_frontier = true;
                     }
                 }
             }
         }
-
     }
-    else {
-        for (int i = 0; i < frontier_count; i++) {
-            int outgoing_size_frontier = outgoing_size[frontier->vertices[i]];
-            if (outgoing_size_frontier) {
-                int myfrontiers[outgoing_size[frontier->vertices[i]]];
-                int mycount = 0;
-                int node = frontier->vertices[i];
-                // printf("Tou no vertice %d\n", node);
-                int start_edge = outgoing_starts[node];
-                int end_edge = (node == numNodes - 1)
-                                ? numEdges
-                                : outgoing_starts[node + 1];
-                                
-                // attempt to add all neighbors to the new frontier
-                // printf("Os meus vizinhos:\n");
-                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                    int outgoing = g->outgoing_edges[neighbor];
-                    int index = 0;
-                    // printf("%d\n", outgoing);
 
-                    if (distances[outgoing] == NOT_VISITED_MARKER) {
-                        distances[outgoing] = dist_frontier + 1;
-                        myfrontiers[mycount++] = outgoing;
-                        // printf("counters[%d] = %d\n", i, counters[i]);
-                        // printf("Adicionei %d-%d\n", node, outgoing);
-                    }
-                }
-
-                for (int j = 0; j < mycount; j++) {
-                    // printf("Adicionei na new frontier %d-%d\n", frontier->vertices[i], frontiers[i][j]);
-                    //#pragma omp critical
-                    //{
-                    new_frontier->vertices[new_frontier->count++] = myfrontiers[j];
-                    //}
-                }
-            }
-        }
-    }
+   return have_new_frontier;
+    
     
 
     /*if (numNodes > 10000) {
@@ -148,15 +90,8 @@ void top_down_step(
 void bfs_top_down(Graph graph, solution* sol) {
 
     int numNodes = graph->num_nodes;
-    int numEdges = graph->num_edges;
-    vertex_set list1;
-    vertex_set list2;
-    vertex_set_init(&list1, numNodes);
-    vertex_set_init(&list2, numNodes);
-
-    vertex_set* frontier = &list1;
-    vertex_set* new_frontier = &list2;
-
+    int numEdges = graph->num_edges, dist_frontier = 0;
+    bool have_new_frontier = true;
     int *outgoingsize, *outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
     outgoingstarts = (int*) malloc(sizeof(int) * numNodes);
@@ -170,35 +105,26 @@ void bfs_top_down(Graph graph, solution* sol) {
     }
 
     // setup frontier with the root node
-    frontier->vertices[frontier->count++] = ROOT_NODE_ID;
     sol->distances[ROOT_NODE_ID] = 0;
 
-    while (frontier->count != 0) {
+    while (have_new_frontier) {
 
 #ifdef VERBOSE
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        vertex_set_clear(new_frontier);
-
-        top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts, numEdges);
+        have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier);
+        dist_frontier++;
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
 #endif
 
-        // swap pointers
-
-        vertex_set* tmp = frontier;
-        frontier = new_frontier;
-        new_frontier = tmp;
     }
 
     free(outgoingsize);
     free(outgoingstarts);
-    free(list1.vertices);
-    free(list2.vertices);
 }
 
 /**************************************************************************************
@@ -318,15 +244,8 @@ void bfs_hybrid(Graph graph, solution* sol)
     // You will need to implement the "hybrid" BFS here as
     // described in the handout.
     int numNodes = graph->num_nodes;
-    int numEdges = graph->num_edges;
-
-    vertex_set list1;
-    vertex_set list2;
-    vertex_set_init(&list1, numNodes);
-    vertex_set_init(&list2, numNodes);
-
-    vertex_set* frontier = &list1;
-    vertex_set* new_frontier = &list2;
+    int numEdges = graph->num_edges, dist_frontier = 0; 
+    bool have_new_frontier = true;
     
     int *outgoingsize, *outgoingstarts;
     outgoingsize = (int*) malloc(sizeof(int) * numNodes);
@@ -341,39 +260,31 @@ void bfs_hybrid(Graph graph, solution* sol)
     }
 
     // setup frontier with the root node
-    frontier->vertices[frontier->count++] = ROOT_NODE_ID;
     sol->distances[ROOT_NODE_ID] = 0;
 
-    while (frontier->count != 0) {
+    while (have_new_frontier) {
 
 #ifdef VERBOSE
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        vertex_set_clear(new_frontier);
         // Top down complexity: number of frontier nodes
         // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
-        //if (frontier->count * frontier->count > numNodes) {
-        //    bottom_up_step(graph, frontier, new_frontier, sol->distances, numEdges);
-        //}
-        //else {
-            top_down_step(graph, frontier, new_frontier, sol->distances, outgoingsize, outgoingstarts, numEdges);
-        //}
+        if (numNodes/8) {
+            have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier);
+        }
+        else {
+            have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier);
+        }
+        dist_frontier++;
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
 #endif
 
-        // swap pointers
-        vertex_set* tmp = frontier;
-        frontier = new_frontier;
-        new_frontier = tmp;
     }
 
     free(outgoingsize);
     free(outgoingstarts);
-
-    free(list1.vertices);
-    free(list2.vertices);
 }
