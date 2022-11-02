@@ -35,45 +35,76 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    # pragma omp parallel for schedule(dynamic, 8000)
-    for (int i = 0; i <= *search_max_in_frontier; i++) {
-        int mycount = 0;
-        int my_max = -1;
-        if (distances[i] == dist_frontier) {
-            if (outgoing_size[i]) {
-                int start_edge = outgoing_starts[i];
-                int end_edge = (i == numNodes - 1)
-                                ? numEdges
-                                : outgoing_starts[i + 1];
-                                
-                // attempt to add all neighbors to the new frontier
-                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                    int outgoing = g->outgoing_edges[neighbor];
+    if (*search_max_in_frontier > 8000) {
+        # pragma omp parallel for schedule(dynamic, 8000)
+        for (int i = 0; i <= *search_max_in_frontier; i++) {
+            int mycount = 0;
+            int my_max = -1;
+            if (distances[i] == dist_frontier) {
+                if (outgoing_size[i]) {
+                    int start_edge = outgoing_starts[i];
+                    int end_edge = (i == numNodes - 1)
+                                    ? numEdges
+                                    : outgoing_starts[i + 1];
+                                    
+                    // attempt to add all neighbors to the new frontier
+                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                        int outgoing = g->outgoing_edges[neighbor];
 
-                    if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                        // printf("adicionei %d\n", outgoing);
-                        have_new_frontier = true;
-                        if (*frontier_count != -1) {
-                            mycount++;
-                        }
-                        if (outgoing > my_max) {
-                            my_max = outgoing;
+                        if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                            // printf("adicionei %d\n", outgoing);
+                            have_new_frontier = true;
+                            if (*frontier_count != -1) {
+                                mycount++;
+                            }
+                            if (outgoing > my_max) {
+                                my_max = outgoing;
+                            }
                         }
                     }
                 }
             }
-        }
-        if (*frontier_count != -1) {
-            if (mycount > 0) {
-                #pragma omp atomic
-                new_frontier_count += mycount;
+            if (*frontier_count != -1) {
+                if (mycount > 0) {
+                    #pragma omp atomic
+                    new_frontier_count += mycount;
+                }
+            }
+            if (my_max > max) {
+                #pragma omp critical
+                {
+                    if (my_max > max) {
+                        max = my_max;
+                    }
+                }
             }
         }
-        if (my_max > max) {
-            #pragma omp critical
-            {
-                if (my_max > max) {
-                    max = my_max;
+    }
+    else {
+        for (int i = 0; i <= *search_max_in_frontier; i++) {
+            if (distances[i] == dist_frontier) {
+                if (outgoing_size[i]) {
+                    int start_edge = outgoing_starts[i];
+                    int end_edge = (i == numNodes - 1)
+                                    ? numEdges
+                                    : outgoing_starts[i + 1];
+                                    
+                    // attempt to add all neighbors to the new frontier
+                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                        int outgoing = g->outgoing_edges[neighbor];
+
+                        if (distances[outgoing] == NOT_VISITED_MARKER) {
+                            distances[outgoing] = dist_frontier + 1;
+                            // printf("adicionei %d\n", outgoing);
+                            have_new_frontier = true;
+                            if (*frontier_count != -1) {
+                                new_frontier_count++;
+                            }
+                            if (outgoing > max) {
+                                max = outgoing;
+                            }
+                        }
+                    }
                 }
             }
         }
