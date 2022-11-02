@@ -243,31 +243,34 @@ bool bottom_up_step(
     int new_frontier_count = 0;
     int chunk_size = (numNodes + 6400 - 1) / 6400;
 
-    // if (max - min > 8000) {
-        # pragma omp parallel for schedule(dynamic, chunk_size)
-        for (int i = min; i <= max; i++) {
+    if (max - min > 8000) {
+        # pragma omp parallel
+        {
             int mycount = 0;
-            // printf("Tou no vertice %d\n", i);
-            if (distances[i] == NOT_VISITED_MARKER) {
-                int start_edge = g->incoming_starts[i];
-                int end_edge = (i == numNodes - 1)
-                                ? numEdges
-                                : g->incoming_starts[i + 1];
-                // printf("Numero vizinhos = %d\n", end_edge - start_edge);
-                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                    int incoming = g->incoming_edges[neighbor];
+            # pragma omp for schedule(dynamic, chunk_size)
+            for (int i = min; i <= max; i++) {
+                // printf("Tou no vertice %d\n", i);
+                if (distances[i] == NOT_VISITED_MARKER) {
+                    int start_edge = g->incoming_starts[i];
+                    int end_edge = (i == numNodes - 1)
+                                    ? numEdges
+                                    : g->incoming_starts[i + 1];
+                    // printf("Numero vizinhos = %d\n", end_edge - start_edge);
+                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                        int incoming = g->incoming_edges[neighbor];
 
-                    // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
-                    if (distances[incoming] == dist_frontier) {
-                        // printf("Adicionei %d\n", incoming);
-                        distances[i] = dist_frontier + 1; 
-                        
-                        have_new_frontier = true;
+                        // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
+                        if (distances[incoming] == dist_frontier) {
+                            // printf("Adicionei %d\n", incoming);
+                            distances[i] = dist_frontier + 1; 
+                            
+                            have_new_frontier = true;
 
-                        if (*frontier_count != -1) {
-                            mycount++;
+                            if (*frontier_count != -1) {
+                                mycount++;
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }
@@ -278,8 +281,8 @@ bool bottom_up_step(
                 }
             }
         }
-    // }
-    /*else {
+    }
+    else {
         for (int i = min; i <= max; i++) {
             int mycount = 0;
             // printf("Tou no vertice %d\n", i);
@@ -307,7 +310,7 @@ bool bottom_up_step(
                 }
             }
         }
-    }*/
+    }
 
     *frontier_count = new_frontier_count;
 
