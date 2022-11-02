@@ -157,68 +157,67 @@ bool top_down_step_dense(
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
     int *search_max_in_frontier, int *search_min_in_frontier)
 {
-    // printf("%d\n", *search_max_in_frontier);
+    printf("%d\n", *search_max_in_frontier);
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    int chunk_size = (numNodes + 6400 - 1) / 6400;
-    //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
-        #pragma omp parallel
-        {
-            int mycount = 0;
-            int my_max = -1;
-            int my_min = numNodes + 1;
+    int chunk_size = (numNodes + 8000 - 1) / 8000;
+    #pragma omp parallel
+    {
+        int mycount = 0;
+        int my_max = -1;
+        int my_min = numNodes + 1;
+        
+        # pragma omp for schedule(dynamic, chunk_size) nowait
+        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             
-            # pragma omp for schedule(dynamic, chunk_size) nowait
-            for (int i = 0; i <= numNodes; i++) {
-                
-                if (distances[i] == dist_frontier) {
-                    if (outgoing_size(g,i)) {
-                        int start_edge = g->outgoing_starts[i];
-                        int end_edge = (i == numNodes - 1)
-                                        ? numEdges
-                                        : g->outgoing_starts[i + 1];
-                                        
-                        // attempt to add all neighbors to the new frontier
-                        for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                            int outgoing = g->outgoing_edges[neighbor];
+            if (distances[i] == dist_frontier) {
+                if (outgoing_size(g,i)) {
+                    int start_edge = g->outgoing_starts[i];
+                    int end_edge = (i == numNodes - 1)
+                                    ? numEdges
+                                    : g->outgoing_starts[i + 1];
+                                    
+                    // attempt to add all neighbors to the new frontier
+                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                        int outgoing = g->outgoing_edges[neighbor];
 
-                            if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                                // printf("adicionei %d\n", outgoing);
-                                have_new_frontier = true;
-                                if (*frontier_count != -1) {
-                                    mycount++;
-                                }
-                                /*if (outgoing > my_max) {
-                                    my_max = outgoing;
-                                }
-                                if (outgoing < my_min) {
-                                    my_min = outgoing;
-                                }*/
+                        if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                            // printf("adicionei %d\n", outgoing);
+                            have_new_frontier = true;
+                            if (*frontier_count != -1) {
+                                mycount++;
+                            }
+                            if (outgoing > my_max) {
+                                my_max = outgoing;
+                            }
+                            if (outgoing < my_min) {
+                                my_min = outgoing;
                             }
                         }
                     }
                 }
-                
             }
-            if (*frontier_count != -1) {
-                if (mycount > 0) {
-                    #pragma omp atomic
-                    new_frontier_count += mycount;
-                }
-            }
-            /*if (my_max > max || my_min < min) {
-                #pragma omp critical
-                {
-                    if (my_max > max) {
-                        max = my_max;
-                    }
-                    if (my_min < min) {
-                        min = my_min;
-                    }
-                }
-            }*/
+            
         }
+        if (*frontier_count != -1) {
+            if (mycount > 0) {
+                #pragma omp atomic
+                new_frontier_count += mycount;
+            }
+        }
+        if (my_max > max || my_min < min) {
+            #pragma omp critical
+            {
+                if (my_max > max) {
+                    max = my_max;
+                }
+                if (my_min < min) {
+                    min = my_min;
+                }
+            }
+        }
+    }
 
     //}
         
@@ -255,8 +254,8 @@ bool top_down_step_dense(
     }*/
 
     *frontier_count = new_frontier_count;
-    //*search_max_in_frontier = max;
-    //*search_min_in_frontier = min;
+    *search_max_in_frontier = max;
+    *search_min_in_frontier = min;
 
     return have_new_frontier;
     
