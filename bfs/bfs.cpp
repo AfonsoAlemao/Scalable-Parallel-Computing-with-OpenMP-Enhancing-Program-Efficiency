@@ -244,7 +244,7 @@ bool bottom_up_step(
     int chunk_size = (numNodes + 6400 - 1) / 6400;
 
     if (max - min > 8000) {
-        # pragma omp parallel for schedule(dynamic, 8000)
+        # pragma omp parallel for schedule(dynamic, chunk_size)
         for (int i = min; i <= max; i++) {
             int mycount = 0;
             // printf("Tou no vertice %d\n", i);
