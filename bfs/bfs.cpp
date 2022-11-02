@@ -36,7 +36,7 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    int chunk_size = (*search_max_in_frontier - *search_min_in_frontier + 6400 - 1) / 6400;
+    int chunk_size = (numNodes + 6400 - 1) / 6400;
     //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
         {
@@ -241,6 +241,7 @@ bool bottom_up_step(
     // printf("dist_frontier = %d\n", dist_frontier);
     bool have_new_frontier = false;
     int new_frontier_count = 0;
+    int chunk_size = (numNodes + 6400 - 1) / 6400;
 
     if (max - min > 8000) {
         # pragma omp parallel for schedule(dynamic, 8000)
