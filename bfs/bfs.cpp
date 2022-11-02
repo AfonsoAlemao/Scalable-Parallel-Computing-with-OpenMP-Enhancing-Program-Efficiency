@@ -170,7 +170,7 @@ bool top_down_step_dense(
             int my_min = numNodes + 1;
             
             # pragma omp for schedule(dynamic, chunk_size) nowait
-            for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
+            for (int i = 0; i <= numNodes; i++) {
                 
                 if (distances[i] == dist_frontier) {
                     if (outgoing_size(g,i)) {
@@ -189,12 +189,12 @@ bool top_down_step_dense(
                                 if (*frontier_count != -1) {
                                     mycount++;
                                 }
-                                if (outgoing > my_max) {
+                                /*if (outgoing > my_max) {
                                     my_max = outgoing;
                                 }
                                 if (outgoing < my_min) {
                                     my_min = outgoing;
-                                }
+                                }*/
                             }
                         }
                     }
@@ -207,7 +207,7 @@ bool top_down_step_dense(
                     new_frontier_count += mycount;
                 }
             }
-            if (my_max > max || my_min < min) {
+            /*if (my_max > max || my_min < min) {
                 #pragma omp critical
                 {
                     if (my_max > max) {
@@ -217,7 +217,7 @@ bool top_down_step_dense(
                         min = my_min;
                     }
                 }
-            }
+            }*/
         }
 
     //}
@@ -255,8 +255,8 @@ bool top_down_step_dense(
     }*/
 
     *frontier_count = new_frontier_count;
-    *search_max_in_frontier = max;
-    *search_min_in_frontier = min;
+    //*search_max_in_frontier = max;
+    //*search_min_in_frontier = min;
 
     return have_new_frontier;
     
