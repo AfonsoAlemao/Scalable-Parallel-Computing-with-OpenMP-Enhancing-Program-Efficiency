@@ -38,7 +38,7 @@ bool top_down_step(
     int new_frontier_count = 0;
     int chunk_size = 8000;
 
-    if ( (search_max_in_frontier - search_min_in_frontier) < 400){
+    /* if ( (search_max_in_frontier - search_min_in_frontier) < 400){
         chunk_size = 20;
     }
     else if((search_max_in_frontier - search_min_in_frontier) < 800){
@@ -64,6 +64,12 @@ bool top_down_step(
     }
     else{
         chunk_size = 16000;
+    }*/
+    if ( (search_max_in_frontier - search_min_in_frontier) < 16000){
+        chunk_size = 16000;
+    }
+    else{
+        chunk_size = 8000;
     }
     //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
