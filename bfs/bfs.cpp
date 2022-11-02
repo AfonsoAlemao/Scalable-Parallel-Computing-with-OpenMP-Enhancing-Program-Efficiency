@@ -37,40 +37,6 @@ bool top_down_step(
     bool have_new_frontier = false;
     int new_frontier_count = 0;
     int chunk_size = 8000;
-
-    /* if ( (search_max_in_frontier - search_min_in_frontier) < 400){
-        chunk_size = 20;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 800){
-        chunk_size = 50;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 4000){
-        chunk_size = 250;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 8000){
-        chunk_size = 800;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 16000){
-        chunk_size = 1500;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 32000){
-        chunk_size = 2500;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 64000){
-        chunk_size = 8000;
-    }
-    else if((search_max_in_frontier - search_min_in_frontier) < 120000){
-        chunk_size = 10000;
-    }
-    else{
-        chunk_size = 16000;
-    }*/
-    if ( (search_max_in_frontier - search_min_in_frontier) < 16000){
-        chunk_size = 16000;
-    }
-    else{
-        chunk_size = 8000;
-    }
     //if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
         #pragma omp parallel
         {
@@ -143,7 +109,6 @@ bool top_down_step(
                     // attempt to add all neighbors to the new frontier
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                         int outgoing = g->outgoing_edges[neighbor];
-
                         if (distances[outgoing] == NOT_VISITED_MARKER) {
                             distances[outgoing] = dist_frontier + 1;
                             // printf("adicionei %d\n", outgoing);
