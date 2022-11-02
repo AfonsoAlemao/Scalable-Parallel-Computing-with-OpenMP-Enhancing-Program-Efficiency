@@ -8,6 +8,7 @@
 
 #include "../common/CycleTimer.h"
 #include "../common/graph.h"
+void bfs_top_down_dense(Graph graph, solution* sol);
 
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
