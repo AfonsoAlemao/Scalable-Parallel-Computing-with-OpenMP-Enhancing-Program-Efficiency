@@ -36,8 +36,8 @@ bool top_down_step(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
-    if (*search_max_in_frontier - *search_min_in_frontier > 1000) {
-        # pragma omp parallel for schedule(dynamic, (*search_max_in_frontier - *search_min_in_frontier + 8000 - 1) / 8000)
+    if (*search_max_in_frontier - *search_min_in_frontier > 8000) {
+        # pragma omp parallel for schedule(dynamic, 8000)
         for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             int mycount = 0;
             int my_max = -1;
@@ -242,8 +242,8 @@ bool bottom_up_step(
     bool have_new_frontier = false;
     int new_frontier_count = 0;
 
-    if (max - min > 1000) {
-        # pragma omp parallel for schedule(dynamic, (max - min + 8000 - 1) / 8000)
+    if (max - min > 8000) {
+        # pragma omp parallel for schedule(dynamic, 8000)
         for (int i = min; i <= max; i++) {
             int mycount = 0;
             // printf("Tou no vertice %d\n", i);
