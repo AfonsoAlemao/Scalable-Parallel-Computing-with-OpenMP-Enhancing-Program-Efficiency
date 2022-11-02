@@ -315,6 +315,7 @@ void bfs_hybrid(Graph graph, solution* sol)
         // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
         if (frontier_count > numNodes / 8) {
             have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier, &frontier_count);
+            search_max_in_frontier = numNodes;
         }
         else {
             have_new_frontier = top_down_step(graph, sol->distances, outgoingsize, outgoingstarts, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier);
