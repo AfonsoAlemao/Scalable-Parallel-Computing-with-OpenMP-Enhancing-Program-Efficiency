@@ -290,6 +290,9 @@ void bfs_top_down(Graph graph, solution* sol) {
                 mycount_array[j] = mycount_array_new[j];
                 mycount_array_new[j] = 0;
             }
+            int **temp = frontier;
+            frontier = new_frontier;
+            new_frontier = temp;
         }
         
         for(int i = 0; i < 8; i++){
@@ -299,6 +302,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         free(frontier);
         free(new_frontier);
         free(mycount_array);
+        free(mycount_array_new);
     //}
     /* else {
         bfs_top_down_dense(graph, sol);
