@@ -196,11 +196,9 @@ void top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
-                    /* Must use critical to avoid data races. */             
-                    # pragma omp critical 
-                    {
+                    /* Must use atomic capture to avoid data races. */             
+                    # pragma omp atomic capture
                     index = count++;
-                    }
 
                     new_frontier->vertices[index] = outgoing;
                 }
