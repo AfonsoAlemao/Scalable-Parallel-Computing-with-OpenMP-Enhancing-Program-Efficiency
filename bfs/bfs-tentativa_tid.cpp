@@ -35,7 +35,6 @@ between threads and the launching of these be harmful to the performance of the 
   In this way, it is not necessary to explicitly represent the frontiers, 
   it is enough to represent the distances of each vertex to the root.
   frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
-
 bool top_down_step_dense(
     Graph g,
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
@@ -170,19 +169,59 @@ void bfs_top_down_dense(Graph graph, solution* sol) {
  In this way, it is necessary to explicitly represent the frontiers.*/
 void top_down_step(
     Graph g,
-    vertex_set* frontier,
-    vertex_set* new_frontier,
-    int* distances)
+    int **frontier,
+    int **new_frontier,
+    int *mycount_array,
+    int *mycount_array_new,
+    int sum_mycounts,
+    int *distances)
 {
-    int dist_frontier = distances[frontier->vertices[0]];
 
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
-    if (frontier->count > 1000) {
-        int count = 0;
-        # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
-        for (int i = 0; i < frontier->count; i++) {
-            int node = frontier->vertices[i];
+    printf("Frontier count = %d\n", sum_mycounts);
+
+    for(int i = 0; i < 8; i++) {
+        printf("mycount_array[%d] = %d\n", i, mycount_array[i]);
+        printf("mycount_array_new[%d] = %d\n", i, mycount_array_new[i]);
+    }
+
+    #pragma omp parallel 
+    {
+
+        int tid = omp_get_thread_num(); 
+        int numThreads = omp_get_num_threads();
+
+
+        # pragma omp parallel for schedule(dynamic, (sum_mycounts + 128 - 1) / 128) 
+        for (int i = 0; i < sum_mycounts; i++) {
+            int node;
+            printf("%d\n", tid);
+
+            if (i < mycount_array[0] ){
+                node = frontier[0][i]; 
+            }
+            else if (i < (mycount_array[0] +  mycount_array[1]) ){
+                node = frontier[1][i - mycount_array[0]];
+            }
+            else if (i < (mycount_array[0] +  mycount_array[1] +  mycount_array[2]) ){
+                node = frontier[2][i - mycount_array[0] - mycount_array[1]];
+            }
+            else if (i < (mycount_array[0] +  mycount_array[1] +  mycount_array[2] +  mycount_array[3]) ){
+                node = frontier[3][i - mycount_array[0] - mycount_array[1] - mycount_array[2] ];
+            }
+            else if (i < (sum_mycounts - (mycount_array[7] +  mycount_array[6] +  mycount_array[5]))){
+                node = frontier[4][i - (mycount_array[0] +  mycount_array[1] +  mycount_array[2] +  mycount_array[3])];
+            }
+            else if (i < (sum_mycounts - (mycount_array[7] +  mycount_array[6])) ){
+                node = frontier[5][i - (mycount_array[0] +  mycount_array[1] +  mycount_array[2] +  mycount_array[3] + mycount_array[4])];
+            }
+            else if (i < (sum_mycounts - (mycount_array[7])) ){
+                node = frontier[6][i - (mycount_array[0] +  mycount_array[1] +  mycount_array[2] +  mycount_array[3] + mycount_array[4] + mycount_array[5])];
+            }
+            else {
+                node = frontier[7][i - (mycount_array[0] +  mycount_array[1] +  mycount_array[2] +  mycount_array[3] + mycount_array[4] + mycount_array[5] + mycount_array[6])];
+            }
             
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -195,44 +234,18 @@ void top_down_step(
                 int index = 0;
 
                 /* Must use atomic to avoid data races. */
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
+                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, distances[node] + 1)) {   
                     /* Must use critical to avoid data races. */             
-                    # pragma omp critical 
-                    {
-                    index = count++;
-                    }
 
-                    new_frontier->vertices[index] = outgoing;
+                    new_frontier[tid][mycount_array_new[tid]++] = outgoing;
+                    
                 }
                 
             }
         }
-        new_frontier->count = count; 
     }
-    else {
-        for (int i = 0; i < frontier->count; i++) {
-            int node = frontier->vertices[i];
-            
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_frontier + 1;
-                    index = new_frontier->count++;
-
-                    new_frontier->vertices[index] = outgoing;
-                }
-            }
-            
-        }
-    }
+    printf("\n\n");
+   
 }
 
 /* Implements top-down BFS. Result of execution is that, for each node 
@@ -242,14 +255,17 @@ void bfs_top_down(Graph graph, solution* sol) {
     /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
     performance is better if we iterate through the nodes rather than across the frontier. 
     Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
-    if (graph->num_edges * 2 / graph->num_nodes < 10) {
-        vertex_set list1;
-        vertex_set list2;
-        vertex_set_init(&list1, graph->num_nodes);
-        vertex_set_init(&list2, graph->num_nodes);
+    //if (graph->num_edges * 2 / graph->num_nodes < 10) {
+        int **frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
+        int **new_frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
+        int *mycount_array = (int*)calloc(sizeof(int),8);
+        int *mycount_array_new = (int*)calloc(sizeof(int),8);
 
-        vertex_set* frontier = &list1;
-        vertex_set* new_frontier = &list2;
+        for(int i = 0; i < 8; i++){
+            frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
+            new_frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
+        }
+
 
         /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
         # pragma omp parallel for
@@ -257,36 +273,46 @@ void bfs_top_down(Graph graph, solution* sol) {
             sol->distances[i] = NOT_VISITED_MARKER;
 
         /* Setup frontier with the root node. */
-        frontier->vertices[frontier->count++] = ROOT_NODE_ID;
+        frontier[0][0] = ROOT_NODE_ID;
+        mycount_array[0] = 1;
+        int sumcounts = 1;
         sol->distances[ROOT_NODE_ID] = 0;
 
-        while (frontier->count != 0) {
+        while (sumcounts != 0) {
 
     #ifdef VERBOSE
             double start_time = CycleTimer::currentSeconds();
     #endif
 
-            vertex_set_clear(new_frontier);
-
-            top_down_step(graph, frontier, new_frontier, sol->distances);
+            top_down_step(graph, frontier, new_frontier, mycount_array, mycount_array_new, sumcounts, sol->distances);
 
     #ifdef VERBOSE
         double end_time = CycleTimer::currentSeconds();
         printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
     #endif
 
-            /* Swap pointers */
-            vertex_set* tmp = frontier;
-            frontier = new_frontier;
-            new_frontier = tmp;
-        }
+            sumcounts = 0;
 
-        free(list1.vertices);
-        free(list2.vertices);
-    }
-    else {
+            for (int j = 0; j < 8; j++){
+                sumcounts += mycount_array_new[j];
+                mycount_array[j] = mycount_array_new[j];
+                mycount_array_new[j] = 0;
+            }
+
+        }
+        
+        for(int i = 0; i < 8; i++){
+            free(frontier[i]);
+            free(new_frontier[i]);
+        }
+        free(frontier);
+        free(new_frontier);
+        free(mycount_array);
+        free(mycount_array_new);
+    //}
+    /* else {
         bfs_top_down_dense(graph, sol);
-    }
+    }*/
     
 }
 
@@ -391,7 +417,7 @@ bool bottom_up_step(
     //
     // As was done in the top-down case, you may wish to organize your
     // code by creating subroutine bottom_up_step() that is called in
-    // each step of the BFS process.
+    // each step of the BFS process.frontier->count
 void bfs_bottom_up(Graph graph, solution* sol)
 {
     
