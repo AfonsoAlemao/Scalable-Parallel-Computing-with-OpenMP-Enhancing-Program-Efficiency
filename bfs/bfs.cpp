@@ -30,97 +30,6 @@ finished one chunk, it is dynamically assigned another. The chunk size was chose
 granularity to balance the workload beetween threads and also to avoid that the overhead associated with the communication 
 between threads and the launching of these be harmful to the performance of the program.*/
 
-/* Take one step of "top-down" BFS for hybrid mode. 
-  Performance is better if we iterate through the nodes rather than across the frontier, because
-  in this way, for hybrid mode it is not necessary to explicitly represent the frontiers like in
-  bottom up step. It is enough to represent the distances of each vertex to the root.
-  frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
-bool top_down_step_hybrid(
-    Graph g,
-    int* distances, int numEdges, int dist_frontier, int *frontier_count, 
-    int *search_max_in_frontier, int *search_min_in_frontier)
-{
-    int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
-    bool have_new_frontier = false;
-    int new_frontier_count = 0;
-
-    /* Explained line 27. Hard coded value was chosen by testing. */
-    int chunk_size = (numNodes + 6400 - 1) / 6400;
-
-    /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
-        we want that a team created once are reused many times. Not active threads are put in wait state, 
-        potentially reducing disbanding cost.  */
-    #pragma omp parallel
-    {
-        int mycount = 0;
-        int my_max = -1;
-        int my_min = numNodes + 1;
-
-        /* Removing implicit barrier. */
-        # pragma omp for schedule(dynamic, chunk_size) nowait
-        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
-            
-            if (distances[i] == dist_frontier) {
-                if (outgoing_size(g,i)) {
-                    int start_edge = g->outgoing_starts[i];
-                    int end_edge = (i == numNodes - 1)
-                                    ? numEdges
-                                    : g->outgoing_starts[i + 1];
-                                    
-                    /* Attempt to add all neighbors to the new frontier. */
-                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                        int outgoing = g->outgoing_edges[neighbor];
-
-                        /* Must use atomic to avoid data races. */
-                        if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                            have_new_frontier = true;
-                            /* Used to update the range of nodes that have not yet been visited */
-                            if (outgoing > my_max) {
-                                my_max = outgoing;
-                            }
-                            if (outgoing < my_min) {
-                                my_min = outgoing;
-                            }
-                            /* Only for hybrid mode. */
-                            if (*frontier_count != -1) {
-                                mycount++;
-                            }
-                        }
-                    }
-                }
-            }
-            
-        }
-        /* Only for hybrid mode. */
-        if (*frontier_count != -1) {
-            if (mycount > 0) {
-                /* Must use atomic to avoid data races. */
-                #pragma omp atomic
-                new_frontier_count += mycount;
-            }
-        }
-        /* Updates the range of nodes that have not yet been visited */
-        if (my_max > max || my_min < min) {
-            /* Must use critical to avoid data races. */
-            #pragma omp critical
-            {
-                if (my_max > max) {
-                    max = my_max;
-                }
-                if (my_min < min) {
-                    min = my_min;
-                }
-            }
-        }
-    }
-
-    *frontier_count = new_frontier_count;
-    *search_max_in_frontier = max;
-    *search_min_in_frontier = min;
-
-    return have_new_frontier;
-}
-
 
 /* Take one step of "top-down" BFS.  For each vertex on the frontier,
  follow all outgoing edges, and add all neighboring vertices to the
@@ -135,6 +44,9 @@ bool top_down_step(
 {
     bool have_frontier = false;
     int count[8];
+    for (int i = 0; i < 8; i++) {
+        count[i] = mycount_array[i];
+    }
 
     /* To avoid that the teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
     we want that a team created once are reused many times. Not active threads are put in wait state, 
@@ -144,11 +56,6 @@ bool top_down_step(
         int tid = omp_get_thread_num();
         int numThreads = omp_get_num_threads();
         mycount_array[tid] = 0;
-
-        #pragma omp for
-        for (int i = 0; i < 8; i++) {
-            count[i] = mycount_array[i];
-        }
 
         for (int k = 0; k < 8; k++) {
             for (int i = tid; i < count[k] ; i += numThreads) {
@@ -391,6 +298,97 @@ void bfs_bottom_up(Graph graph, solution* sol)
 
 }
 
+
+/* Take one step of "top-down" BFS for hybrid mode. 
+  Performance is better if we iterate through the nodes rather than across the frontier, because
+  in this way, for hybrid mode it is not necessary to explicitly represent the frontiers like in
+  bottom up step. It is enough to represent the distances of each vertex to the root.
+  frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
+bool top_down_step_hybrid(
+    Graph g,
+    int* distances, int numEdges, int dist_frontier, int *frontier_count, 
+    int *search_max_in_frontier, int *search_min_in_frontier)
+{
+    int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
+    bool have_new_frontier = false;
+    int new_frontier_count = 0;
+
+    /* Explained line 27. Hard coded value was chosen by testing. */
+    int chunk_size = (numNodes + 6400 - 1) / 6400;
+
+    /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
+        we want that a team created once are reused many times. Not active threads are put in wait state, 
+        potentially reducing disbanding cost.  */
+    #pragma omp parallel
+    {
+        int mycount = 0;
+        int my_max = -1;
+        int my_min = numNodes + 1;
+
+        /* Removing implicit barrier. */
+        # pragma omp for schedule(dynamic, chunk_size) nowait
+        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
+            
+            if (distances[i] == dist_frontier) {
+                if (outgoing_size(g,i)) {
+                    int start_edge = g->outgoing_starts[i];
+                    int end_edge = (i == numNodes - 1)
+                                    ? numEdges
+                                    : g->outgoing_starts[i + 1];
+                                    
+                    /* Attempt to add all neighbors to the new frontier. */
+                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                        int outgoing = g->outgoing_edges[neighbor];
+
+                        /* Must use atomic to avoid data races. */
+                        if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
+                            have_new_frontier = true;
+                            /* Used to update the range of nodes that have not yet been visited */
+                            if (outgoing > my_max) {
+                                my_max = outgoing;
+                            }
+                            if (outgoing < my_min) {
+                                my_min = outgoing;
+                            }
+                            /* Only for hybrid mode. */
+                            if (*frontier_count != -1) {
+                                mycount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+        }
+        /* Only for hybrid mode. */
+        if (*frontier_count != -1) {
+            if (mycount > 0) {
+                /* Must use atomic to avoid data races. */
+                #pragma omp atomic
+                new_frontier_count += mycount;
+            }
+        }
+        /* Updates the range of nodes that have not yet been visited */
+        if (my_max > max || my_min < min) {
+            /* Must use critical to avoid data races. */
+            #pragma omp critical
+            {
+                if (my_max > max) {
+                    max = my_max;
+                }
+                if (my_min < min) {
+                    min = my_min;
+                }
+            }
+        }
+    }
+
+    *frontier_count = new_frontier_count;
+    *search_max_in_frontier = max;
+    *search_min_in_frontier = min;
+
+    return have_new_frontier;
+}
 
 // TODO STUDENTS:
     //
