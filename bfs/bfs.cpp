@@ -35,7 +35,6 @@ between threads and the launching of these be harmful to the performance of the 
   In this way, it is not necessary to explicitly represent the frontiers, 
   it is enough to represent the distances of each vertex to the root.
   frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
-
 bool top_down_step_dense(
     Graph g,
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
