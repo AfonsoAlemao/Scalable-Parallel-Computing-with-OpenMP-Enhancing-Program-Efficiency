@@ -10,6 +10,8 @@
 #include "../common/graph.h"
 void bfs_top_down_dense(Graph graph, solution* sol);
 
+// #define VERBOSE
+
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
 
@@ -35,7 +37,6 @@ between threads and the launching of these be harmful to the performance of the 
   In this way, it is not necessary to explicitly represent the frontiers, 
   it is enough to represent the distances of each vertex to the root.
   frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
-
 bool top_down_step_dense(
     Graph g,
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
@@ -174,15 +175,15 @@ void top_down_step(
     vertex_set* new_frontier,
     int* distances)
 {
-    int dist_frontier = distances[frontier->vertices[0]];
+    int dist_frontier = distances[frontier->vertices[0]] + 1;
 
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
-    if (frontier->count > 1000) {
+    if (frontier->count > 500) {
         int count = 0;
-        # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
+        #pragma omp parallel for schedule(dynamic, (frontier->count + 500 - 1) / 500)
         for (int i = 0; i < frontier->count; i++) {
-            int node = frontier->vertices[i];
+            int node = frontier->vertices[i],index;
             
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -192,14 +193,12 @@ void top_down_step(
             /* Attempt to add all neighbors to the new frontier */
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                 int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
 
                 /* Must use atomic to avoid data races. */
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
-                    /* Must use atomic capture to avoid data races. */             
-                    # pragma omp atomic capture
-                    index = count++;
-
+                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier )) {   
+                    /* Must use atomic to avoid data races. */          
+                    #pragma omp atomic capture
+                        index=count++;
                     new_frontier->vertices[index] = outgoing;
                 }
                 
@@ -215,20 +214,20 @@ void top_down_step(
             int end_edge = (node == g->num_nodes - 1)
                             ? g->num_edges
                             : g->outgoing_starts[node + 1];
-
-
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+    
+    
+           for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                 int outgoing = g->outgoing_edges[neighbor];
                 int index = 0;
-
+    
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_frontier + 1;
+                    distances[outgoing] = dist_frontier ;
                     index = new_frontier->count++;
-
+    
                     new_frontier->vertices[index] = outgoing;
                 }
             }
-            
+           
         }
     }
 }
@@ -240,7 +239,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
     performance is better if we iterate through the nodes rather than across the frontier. 
     Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
-    if (graph->num_edges * 2 / graph->num_nodes < 10) {
+    //if (graph->num_edges * 2 / graph->num_nodes < 10) {
         vertex_set list1;
         vertex_set list2;
         vertex_set_init(&list1, graph->num_nodes);
@@ -281,10 +280,10 @@ void bfs_top_down(Graph graph, solution* sol) {
 
         free(list1.vertices);
         free(list2.vertices);
-    }
-    else {
-        bfs_top_down_dense(graph, sol);
-    }
+    //}
+    //else {
+    //    bfs_top_down_dense(graph, sol);
+    //}
     
 }
 
