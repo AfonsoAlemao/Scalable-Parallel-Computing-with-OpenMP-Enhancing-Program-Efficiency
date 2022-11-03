@@ -179,59 +179,60 @@ void top_down_step(
 
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
-    if (frontier->count > 1000) {
-        int count = 0;
-        # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
-        for (int i = 0; i < frontier->count; i++) {
-            int node = frontier->vertices[i];
-            
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
+    //if (frontier->count > 1000) {
+    int count = 0;
+    //# pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
+    #pragma omp parallel for
+    for (int i = 0; i < frontier->count; i++) {
+        int node = frontier->vertices[i];
+        
+        int start_edge = g->outgoing_starts[node];
+        int end_edge = (node == g->num_nodes - 1)
+                        ? g->num_edges
+                        : g->outgoing_starts[node + 1];
 
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
+        /* Attempt to add all neighbors to the new frontier */
+        for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+            int outgoing = g->outgoing_edges[neighbor];
+            int index = 0;
 
-                /* Must use atomic to avoid data races. */
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
-                    /* Must use critical to avoid data races. */             
-                    # pragma omp atomic capture
-                    index = count++;
+            /* Must use atomic to avoid data races. */
+            if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
+                /* Must use atomic to avoid data races. */          
+                # pragma omp atomic capture
+                index = count++;
 
-                    new_frontier->vertices[index] = outgoing;
-                }
-                
-            }
-        }
-        new_frontier->count = count; 
-    }
-    else {
-        for (int i = 0; i < frontier->count; i++) {
-            int node = frontier->vertices[i];
-            
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_frontier + 1;
-                    index = new_frontier->count++;
-
-                    new_frontier->vertices[index] = outgoing;
-                }
+                new_frontier->vertices[index] = outgoing;
             }
             
         }
     }
+    new_frontier->count = count; 
+    //}
+    //else {
+    //    for (int i = 0; i < frontier->count; i++) {
+    //        int node = frontier->vertices[i];
+    //        
+    //        int start_edge = g->outgoing_starts[node];
+    //       int end_edge = (node == g->num_nodes - 1)
+    //                        ? g->num_edges
+    //                        : g->outgoing_starts[node + 1];
+    //
+    //
+    //       for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+    //            int outgoing = g->outgoing_edges[neighbor];
+    //            int index = 0;
+    //
+    //            if (distances[outgoing] == NOT_VISITED_MARKER) { 
+    //                distances[outgoing] = dist_frontier + 1;
+    //                index = new_frontier->count++;
+    //
+    //                new_frontier->vertices[index] = outgoing;
+    //            }
+    //        }
+    //       
+    //    }
+    //}
 }
 
 /* Implements top-down BFS. Result of execution is that, for each node 
