@@ -135,9 +135,6 @@ bool top_down_step(
 {
     bool have_frontier = false;
     int count[8];
-    for (int i = 0; i < 8; i++) {
-        count[i] = mycount_array[i];
-    }
 
     /* To avoid that the teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
     we want that a team created once are reused many times. Not active threads are put in wait state, 
@@ -147,6 +144,11 @@ bool top_down_step(
         int tid = omp_get_thread_num();
         int numThreads = omp_get_num_threads();
         mycount_array[tid] = 0;
+
+        #pragma omp for
+        for (int i = 0; i < 8; i++) {
+            count[i] = mycount_array[i];
+        }
 
         for (int k = 0; k < 8; k++) {
             for (int i = tid; i < count[k] ; i += numThreads) {
