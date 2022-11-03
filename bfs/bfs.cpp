@@ -30,10 +30,10 @@ finished one chunk, it is dynamically assigned another. The chunk size was chose
 granularity to balance the workload beetween threads and also to avoid that the overhead associated with the communication 
 between threads and the launching of these be harmful to the performance of the program.*/
 
-/* Take one step of "top-down" BFS for dense graphs.
-  Performance is better if we iterate through the nodes rather than across the frontier. 
-  In this way, it is not necessary to explicitly represent the frontiers, 
-  it is enough to represent the distances of each vertex to the root.
+/* Take one step of "top-down" BFS for hybrid mode. 
+  Performance is better if we iterate through the nodes rather than across the frontier, because
+  in this way, for hybrid mode it is not necessary to explicitly represent the frontiers like in
+  bottom up step. It is enough to represent the distances of each vertex to the root.
   frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
 bool top_down_step_hybrid(
     Graph g,
@@ -124,9 +124,7 @@ bool top_down_step_hybrid(
 
 /* Take one step of "top-down" BFS.  For each vertex on the frontier,
  follow all outgoing edges, and add all neighboring vertices to the
- new_frontier. Used for not dense graphs. 
- Performance is better if we iterate through the frontier rather than across the nodes. 
- In this way, it is necessary to explicitly represent the frontiers.*/
+ new_frontier. Used for not dense graphs. */
 bool top_down_step(
     Graph g,
     int **frontier,
@@ -135,11 +133,10 @@ bool top_down_step(
     int dist_new_frontier,
     int *distances)
 {
-    /* If frontier count is low, program's performance is improved if we execute our code sequentially,
-    because of the overhead associated with the communication between threads and its launching. */
     bool have_frontier = false;
     int chunk_size = (g->num_nodes + 6400 - 1) / 6400;
-    int count0 = mycount_array[0], count1 = mycount_array[1], count2 = mycount_array[2], count3 = mycount_array[3], count4 = mycount_array[4], count5 = mycount_array[5], count6 = mycount_array[6], count7 = mycount_array[7];
+    int count0 = mycount_array[0], count1 = mycount_array[1], count2 = mycount_array[2], count3 = mycount_array[3]; 
+    int count4 = mycount_array[4], count5 = mycount_array[5], count6 = mycount_array[6], count7 = mycount_array[7];
 
     #pragma omp parallel 
     {
@@ -170,7 +167,6 @@ bool top_down_step(
                 
             }
         }
-
         
         for (int i = tid; i < count1 ; i += numThreads) {
             int node = frontier[1][i];
@@ -196,6 +192,7 @@ bool top_down_step(
                 
             }
         }
+
         for (int i = tid; i < count2 ; i += numThreads) {
             int node = frontier[2][i];
 
@@ -220,6 +217,7 @@ bool top_down_step(
                 
             }
         }
+
         for (int i = tid; i < count3 ; i += numThreads) {
             int node = frontier[3][i];
 
@@ -244,6 +242,7 @@ bool top_down_step(
                 
             }
         }
+
         for (int i = tid; i < count4 ; i += numThreads) {
             int node = frontier[4][i];
             int start_edge = g->outgoing_starts[node];
@@ -267,6 +266,7 @@ bool top_down_step(
                 
             }
         }
+
         for (int i = tid; i < count5 ; i += numThreads) {
             int node = frontier[5][i];
 
@@ -342,29 +342,25 @@ bool top_down_step(
             }
         }
         
-        
-
     }
 
     return have_frontier;
    
 }
 
+
 /* Implements top-down BFS. Result of execution is that, for each node 
 in the graph, the distance to the root is stored in sol.distances. */
 void bfs_top_down(Graph graph, solution* sol) {
 
-    /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
-    performance is better if we iterate through the nodes rather than across the frontier. 
-    Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
-    int **frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
-    int **new_frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
-    int *mycount_array = (int*)calloc(sizeof(int),8);
+    int **frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
+    int **new_frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
+    int *mycount_array = (int*) calloc(sizeof(int), 8);
     bool have_frontier = true;
 
-    for(int i = 0; i < 8; i++){
-        frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
-        new_frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
+    for (int i = 0; i < 8; i++) {
+        frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
+        new_frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
     }
 
 
@@ -410,13 +406,13 @@ void bfs_top_down(Graph graph, solution* sol) {
     free(mycount_array);
 }
 
+
 /*for each vertex v in graph:
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
 bool bottom_up_step(
     Graph g, int* distances, int numEdges, int dist_frontier, int *frontier_count, int min, int max)
 {
-
     int numNodes = g->num_nodes;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
