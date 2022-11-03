@@ -134,211 +134,42 @@ bool top_down_step(
     int *distances)
 {
     bool have_frontier = false;
-    int chunk_size = (g->num_nodes + 6400 - 1) / 6400;
-    int count0 = mycount_array[0], count1 = mycount_array[1], count2 = mycount_array[2], count3 = mycount_array[3]; 
-    int count4 = mycount_array[4], count5 = mycount_array[5], count6 = mycount_array[6], count7 = mycount_array[7];
+    int count[8];
+    for (int i = 0; i < 8; i++) {
+        count[i] = mycount_array[i];
+    }
 
+    /* To avoid that the teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
+    we want that a team created once are reused many times. Not active threads are put in wait state, 
+    potentially reducing disbanding cost.  */
     #pragma omp parallel 
-    {
+    {        
         int tid = omp_get_thread_num();
         int numThreads = omp_get_num_threads();
         mycount_array[tid] = 0;
 
-        for (int i = tid; i < count0 ; i += numThreads) {
-            int node = frontier[0][i];
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
+        for (int k = 0; k < 8; k++) {
+            for (int i = tid; i < count[k] ; i += numThreads) {
+                int node = frontier[k][i];
+                int start_edge = g->outgoing_starts[node];
+                int end_edge = (node == g->num_nodes - 1)
+                                ? g->num_edges
+                                : g->outgoing_starts[node + 1];
 
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
+                /* Attempt to add all neighbors to the new frontier */
+                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                    int outgoing = g->outgoing_edges[neighbor];
+                    int index = 0;
 
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier; 
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
+                    /* Must use atomic to avoid data races. */
+                    if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_new_frontier)) { 
+                        /* Must use critical to avoid data races. */
+                        have_frontier = true;
+                        new_frontier[tid][mycount_array[tid]++] = outgoing;
+                        
+                    }
                     
                 }
-                
-            }
-        }
-        
-        for (int i = tid; i < count1 ; i += numThreads) {
-            int node = frontier[1][i];
-
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;    
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-
-        for (int i = tid; i < count2 ; i += numThreads) {
-            int node = frontier[2][i];
-
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;   
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-
-        for (int i = tid; i < count3 ; i += numThreads) {
-            int node = frontier[3][i];
-
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;     
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-
-        for (int i = tid; i < count4 ; i += numThreads) {
-            int node = frontier[4][i];
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;     
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-
-        for (int i = tid; i < count5 ; i += numThreads) {
-            int node = frontier[5][i];
-
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;    
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-        
-        for (int i = tid; i < count6 ; i += numThreads) {
-            int node = frontier[6][i];
-            
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;   
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
-            }
-        }
-
-        for (int i = tid; i < count7 ; i += numThreads) {
-            int node = frontier[7][i];
-
-            int start_edge = g->outgoing_starts[node];
-            int end_edge = (node == g->num_nodes - 1)
-                            ? g->num_edges
-                            : g->outgoing_starts[node + 1];
-
-            /* Attempt to add all neighbors to the new frontier */
-            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                int outgoing = g->outgoing_edges[neighbor];
-                int index = 0;
-
-                /* Must use atomic to avoid data races. */
-                if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_new_frontier;   
-                    /* Must use critical to avoid data races. */
-                    have_frontier = true;
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
-                    
-                }
-                
             }
         }
         
@@ -427,7 +258,7 @@ bool bottom_up_step(
         /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
         we want that a team created once are reused many times. Not active threads are put in wait state, 
         potentially reducing disbanding cost.  */
-        # pragma omp parallel
+        # pragma omp parallel reduction(+:new_frontier_count)
         {
             int mycount = 0;
             # pragma omp for schedule(dynamic, chunk_size) nowait
@@ -458,7 +289,6 @@ bool bottom_up_step(
             if (*frontier_count != -1) {
                 if (mycount > 0) {
                     /* Must use atomic to avoid data races. */
-                    #pragma omp atomic
                     new_frontier_count += mycount;
                 }
             }
