@@ -181,8 +181,7 @@ void top_down_step(
     because of the overhead associated with the communication between threads and its launching. */
     //if (frontier->count > 1000) {
     int count = 0;
-    //# pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic, (frontier->count + 16 - 1) / 16)
     for (int i = 0; i < frontier->count; i++) {
         int node = frontier->vertices[i];
         
