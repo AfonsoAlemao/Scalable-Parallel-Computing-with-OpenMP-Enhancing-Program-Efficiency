@@ -483,30 +483,21 @@ void bfs_bottom_up(Graph graph, solution* sol)
         have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_frontier, &flag, min, max);
         distance_frontier++;
 
+
+        if (have_new_frontier) {
+            while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
+                min++;
+            }
+
+            while (sol->distances[max] != NOT_VISITED_MARKER && min <= max) {
+                max--;
+            }
+        }
+        
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier: %.4f sec\n", end_time - start_time);
 #endif
-        if (have_new_frontier) {
-            for (int i = min; i <= max; i++) {
-                if (sol->distances[i] != NOT_VISITED_MARKER) {
-                    min++;
-                }
-                else {
-                    break;
-                }
-            }
-
-            for (int i = max; i >= min; i--) {
-                if (sol->distances[i] != NOT_VISITED_MARKER) {
-                    max--;
-                }
-                else {
-                    break;
-                }
-            }
-        }
-
     }
 
 }
