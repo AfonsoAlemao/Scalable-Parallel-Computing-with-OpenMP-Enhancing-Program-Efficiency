@@ -35,7 +35,7 @@ void top_down_step(
     int chunk_size = (frontier->count + 6400 - 1) / 6400;
     int dist_frontier = distances[frontier->vertices[0]];
     //printf("Frontier count %d\n", frontier->count);
-    //if (frontier->count > 1000) {
+    if (frontier->count > 1000) {
         int count = 0;
         # pragma omp parallel for schedule(dynamic, chunk_size)
         for (int i = 0; i < frontier->count; i++) {
@@ -61,8 +61,8 @@ void top_down_step(
             }
         }
         new_frontier->count = count; 
-    //}
-    /*else {
+    }
+    else {
         for (int i = 0; i < frontier->count; i++) {
             int node = frontier->vertices[i];
             
@@ -85,7 +85,7 @@ void top_down_step(
             }
             
         }
-    }*/
+    }
     // printf("Frontier count = %d\n", frontier->count);
 }
 
