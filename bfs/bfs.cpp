@@ -43,6 +43,8 @@ bool top_down_step_dense(
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
+    int tmax[omp_get_max_threads()] = { -1 };
+    int tmin[omp_get_max_threads()] = { numNodes + 1 };
 
     /* Explained line 27. Hard coded value was chosen by testing. */
     int chunk_size = (numNodes + 6400 - 1) / 6400;
@@ -53,8 +55,9 @@ bool top_down_step_dense(
     #pragma omp parallel
     {
         int mycount = 0;
-        int my_max = -1;
-        int my_min = numNodes + 1;
+        //int my_max = -1;
+        //int my_min = numNodes + 1;
+        int tid = omp_get_thread_num();
 
         /* Removing implicit barrier. */
         # pragma omp for schedule(dynamic, chunk_size) nowait
@@ -75,12 +78,10 @@ bool top_down_step_dense(
                         if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
                             have_new_frontier = true;
                             /* Used to update the range of nodes that have not yet been visited */
-                            if (outgoing > my_max) {
-                                my_max = outgoing;
-                            }
-                            if (outgoing < my_min) {
-                                my_min = outgoing;
-                            }
+                            if (outgoing > tmax[tid]) 
+                                tmax[tid] = outgoing;
+                            if (outgoing < tmin[tid]) 
+                                tmin[tid] = outgoing;
                             /* Only for hybrid mode. */
                             if (*frontier_count != -1) {
                                 mycount++;
@@ -91,17 +92,18 @@ bool top_down_step_dense(
             }
             
         }
-        /* Only for hybrid mode. */
+        // Only for hybrid mode. 
         if (*frontier_count != -1) {
             if (mycount > 0) {
-                /* Must use atomic to avoid data races. */
+                // Must use atomic to avoid data races. 
                 #pragma omp atomic
                 new_frontier_count += mycount;
             }
         }
-        /* Updates the range of nodes that have not yet been visited */
+        // Updates the range of nodes that have not yet been visited 
+        /*
         if (my_max > max || my_min < min) {
-            /* Must use critical to avoid data races. */
+            // Must use critical to avoid data races. 
             #pragma omp critical
             {
                 if (my_max > max) {
@@ -112,6 +114,14 @@ bool top_down_step_dense(
                 }
             }
         }
+        */
+    }
+
+    for(int i=0;i<8;i++){
+        if(tmin[i]<min)
+            min = tmin[i];
+        if(tmax[i]>max)
+            max = tmax[i];
     }
 
     *frontier_count = new_frontier_count;
