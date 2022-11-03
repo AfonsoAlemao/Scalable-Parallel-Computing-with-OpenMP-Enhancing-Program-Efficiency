@@ -128,10 +128,8 @@ void bfs_top_down(Graph graph, solution* sol) {
 
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
-    printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
+    printf("frontier: %.4f sec\n", end_time - start_time);
 #endif
-
-        //sumcounts = 0;
 
         int **temp = frontier;
         frontier = new_frontier;
@@ -247,7 +245,7 @@ bool bottom_up_step(
     //
     // As was done in the top-down case, you may wish to organize your
     // code by creating subroutine bottom_up_step() that is called in
-    // each step of the BFS process.frontier->count
+    // each step of the BFS process.
 void bfs_bottom_up(Graph graph, solution* sol)
 {
     
