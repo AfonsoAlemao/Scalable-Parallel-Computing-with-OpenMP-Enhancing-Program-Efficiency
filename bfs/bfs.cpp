@@ -178,7 +178,7 @@ void top_down_step(
 
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
-    if (frontier->count > 1000) {
+    //if (frontier->count > 1000) {
         int count = 0;
         # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
         for (int i = 0; i < frontier->count; i++) {
@@ -197,10 +197,8 @@ void top_down_step(
                 /* Must use atomic to avoid data races. */
                 if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
                     /* Must use critical to avoid data races. */             
-                    # pragma omp critical 
-                    {
+                    # pragma omp atomic capture 
                     index = count++;
-                    }
 
                     new_frontier->vertices[index] = outgoing;
                 }
@@ -208,7 +206,7 @@ void top_down_step(
             }
         }
         new_frontier->count = count; 
-    }
+    /*}
     else {
         for (int i = 0; i < frontier->count; i++) {
             int node = frontier->vertices[i];
@@ -232,7 +230,7 @@ void top_down_step(
             }
             
         }
-    }
+    }*/
 }
 
 /* Implements top-down BFS. Result of execution is that, for each node 
@@ -242,7 +240,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
     performance is better if we iterate through the nodes rather than across the frontier. 
     Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
-    if (graph->num_edges * 2 / graph->num_nodes < 10) {
+    //if (graph->num_edges * 2 / graph->num_nodes < 10) {
         vertex_set list1;
         vertex_set list2;
         vertex_set_init(&list1, graph->num_nodes);
@@ -283,10 +281,10 @@ void bfs_top_down(Graph graph, solution* sol) {
 
         free(list1.vertices);
         free(list2.vertices);
-    }
+    /*}
     else {
         bfs_top_down_dense(graph, sol);
-    }
+    }*/
     
 }
 
