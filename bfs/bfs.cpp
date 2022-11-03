@@ -24,27 +24,40 @@ void vertex_set_init(vertex_set* list, int count) {
     vertex_set_clear(list);
 }
 
+/* When we execute the # pragma omp for schedule(dynamic, chunk_size), it launches a “team” of OpenMP threads 
+and partitions iterations among them. We choose dynamic schedule when the workload is not balanced across iterations. When a thread
+finished one chunk, it is dynamically assigned another. The chunk size was chosen in order to guarantee enough 
+granularity to balance the workload beetween threads and also to avoid that the overhead associated with the communication 
+between threads and the launching of these be harmful to the performance of the program.*/
 
-// Take one step of "top-down" BFS.  For each vertex on the frontier,
-// follow all outgoing edges, and add all neighboring vertices to the
-// new_frontier.
-// frontier_count is != -1 for hybrid mode
+/* Take one step of "top-down" BFS for dense graphs.
+  Performance is better if we iterate through the nodes rather than across the frontier. 
+  In this way, it is not necessary to explicitly represent the frontiers, 
+  it is enough to represent the distances of each vertex to the root.
+  frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
+
 bool top_down_step_dense(
     Graph g,
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
     int *search_max_in_frontier, int *search_min_in_frontier)
 {
-    // printf("%d\n", *search_max_in_frontier);
     int numNodes = g->num_nodes, max = -1, min = numNodes + 1;
     bool have_new_frontier = false;
     int new_frontier_count = 0;
+
+    /* Explained line 27. Hard coded value was chosen by testing. */
     int chunk_size = (numNodes + 6400 - 1) / 6400;
+
+    /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
+        we want that a team created once are reused many times. Not active threads are put in wait state, 
+        potentially reducing disbanding cost.  */
     #pragma omp parallel
     {
         int mycount = 0;
         int my_max = -1;
         int my_min = numNodes + 1;
-        
+
+        /* Removing implicit barrier. */
         # pragma omp for schedule(dynamic, chunk_size) nowait
         for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
             
@@ -55,21 +68,23 @@ bool top_down_step_dense(
                                     ? numEdges
                                     : g->outgoing_starts[i + 1];
                                     
-                    // attempt to add all neighbors to the new frontier
+                    /* Attempt to add all neighbors to the new frontier. */
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                         int outgoing = g->outgoing_edges[neighbor];
 
+                        /* Must use atomic to avoid data races. */
                         if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {
-                            // printf("adicionei %d\n", outgoing);
                             have_new_frontier = true;
-                            if (*frontier_count != -1) {
-                                mycount++;
-                            }
+                            /* Used to update the range of nodes that have not yet been visited */
                             if (outgoing > my_max) {
                                 my_max = outgoing;
                             }
                             if (outgoing < my_min) {
                                 my_min = outgoing;
+                            }
+                            /* Only for hybrid mode. */
+                            if (*frontier_count != -1) {
+                                mycount++;
                             }
                         }
                     }
@@ -77,13 +92,17 @@ bool top_down_step_dense(
             }
             
         }
+        /* Only for hybrid mode. */
         if (*frontier_count != -1) {
             if (mycount > 0) {
+                /* Must use atomic to avoid data races. */
                 #pragma omp atomic
                 new_frontier_count += mycount;
             }
         }
+        /* Updates the range of nodes that have not yet been visited */
         if (my_max > max || my_min < min) {
+            /* Must use critical to avoid data races. */
             #pragma omp critical
             {
                 if (my_max > max) {
@@ -96,94 +115,34 @@ bool top_down_step_dense(
         }
     }
 
-    //}
-        
-    /* else {
-        for (int i = *search_min_in_frontier; i <= *search_max_in_frontier; i++) {
-            if (distances[i] == dist_frontier) {
-                if (outgoing_size[i]) {
-                    int start_edge = g->outgoing_starts[i];
-                    int end_edge = (i == numNodes - 1)
-                                    ? numEdges
-                                    : g->outgoing_starts[i + 1];
-                                    
-                    // attempt to add all neighbors to the new frontier
-                    for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                        int outgoing = g->outgoing_edges[neighbor];
-                        if (distances[outgoing] == NOT_VISITED_MARKER) {
-                            distances[outgoing] = dist_frontier + 1;
-                            // printf("adicionei %d\n", outgoing);
-                            have_new_frontier = true;
-                            if (*frontier_count != -1) {
-                                new_frontier_count++;
-                            }
-                            if (outgoing > max) {
-                                max = outgoing;
-                            }
-                            if (outgoing < min) {
-                                min = outgoing;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }*/
-
     *frontier_count = new_frontier_count;
     *search_max_in_frontier = max;
     *search_min_in_frontier = min;
 
     return have_new_frontier;
-    
-    
-
-    /*if (numNodes > 10000) {
-        # pragma omp parallel for schedule(dynamic, (numNodes + 8000 - 1) / 8000)
-        for (int k = 0; k < numNodes; k++) {
-            if (distances[k] == dist_frontier + 1) {
-                int index = 0;
-                #pragma omp critical 
-                {
-                    index = new_frontier->count++;
-                }
-                new_frontier->vertices[index] = k;
-            }
-        }
-    }
-    else {
-        for (int k = 0; k < numNodes; k++) {
-            if (distances[k] == dist_frontier + 1) {
-                int index = new_frontier->count++;
-                new_frontier->vertices[index] = k;
-            }
-        }
-    }*/
-
-    // printf("Frontier count = %d\n", frontier->count);
 }
 
-// Implements top-down BFS.
-//
-// Result of execution is that, for each node in the graph, the
-// distance to the root is stored in sol.distances.
+/* Implements top-down BFS for dense graphs.
+  Performance is better if we iterate through the nodes rather than across the frontier. 
+  In this way, it is not necessary to explicitly represent the frontiers, 
+  it is enough to represent the distances of each vertex to the root.
+  Result of execution is that, for each node in the graph, the
+  distance to the root is stored in sol.distances. */
 void bfs_top_down_dense(Graph graph, solution* sol) {
     
     int numNodes = graph->num_nodes;
     int numEdges = graph->num_edges, dist_frontier = 0, flag = -1;
     bool have_new_frontier = true;
-    //int *outgoingsize;
-    //outgoingsize = (int*) malloc(sizeof(int) * numNodes);
+
     int search_max_in_frontier = 0, search_min_in_frontier = 0;
 
-    // initialize all nodes to NOT_VISITED
+    /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;
-        //outgoingsize[i] = outgoing_size(graph, i);
     }
 
-    // setup frontier with the root node
+    /* Setup frontier with the root node */
     sol->distances[ROOT_NODE_ID] = 0;
 
     while (have_new_frontier) {
@@ -201,14 +160,14 @@ void bfs_top_down_dense(Graph graph, solution* sol) {
 #endif
 
     }
-
-    //free(outgoingsize);
 }
 
 
-// Take one step of "top-down" BFS.  For each vertex on the frontier,
-// follow all outgoing edges, and add all neighboring vertices to the
-// new_frontier.
+/* Take one step of "top-down" BFS.  For each vertex on the frontier,
+ follow all outgoing edges, and add all neighboring vertices to the
+ new_frontier. Used for not dense graphs. 
+ Performance is better if we iterate through the frontier rather than across the nodes. 
+ In this way, it is necessary to explicitly represent the frontiers.*/
 void top_down_step(
     Graph g,
     vertex_set* frontier,
@@ -216,7 +175,9 @@ void top_down_step(
     int* distances)
 {
     int dist_frontier = distances[frontier->vertices[0]];
-    //printf("Frontier count %d\n", frontier->count);
+
+    /* If frontier count is low, program's performance is improved if we execute our code sequentially,
+    because of the overhead associated with the communication between threads and its launching. */
     if (frontier->count > 1000) {
         int count = 0;
         # pragma omp parallel for schedule(dynamic, (frontier->count + 128 - 1) / 128)
@@ -228,16 +189,17 @@ void top_down_step(
                             ? g->num_edges
                             : g->outgoing_starts[node + 1];
 
-            // attempt to add all neighbors to the new frontier
+            /* Attempt to add all neighbors to the new frontier */
             for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                 int outgoing = g->outgoing_edges[neighbor];
                 int index = 0;
 
-                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {                
+                /* Must use atomic to avoid data races. */
+                if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_frontier + 1)) {   
+                    /* Must use critical to avoid data races. */             
                     # pragma omp critical 
                     {
                     index = count++;
-                    // index = new_frontier->count++;
                     }
 
                     new_frontier->vertices[index] = outgoing;
@@ -271,16 +233,15 @@ void top_down_step(
             
         }
     }
-    // printf("Frontier count = %d\n", frontier->count);
 }
 
-// Implements top-down BFS.
-//
-// Result of execution is that, for each node in the graph, the
-// distance to the root is stored in sol.distances.
+/* Implements top-down BFS. Result of execution is that, for each node 
+in the graph, the distance to the root is stored in sol.distances. */
 void bfs_top_down(Graph graph, solution* sol) {
 
-    // Graph density
+    /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
+    performance is better if we iterate through the nodes rather than across the frontier. 
+    Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
     if (graph->num_edges * 2 / graph->num_nodes < 10) {
         vertex_set list1;
         vertex_set list2;
@@ -290,12 +251,12 @@ void bfs_top_down(Graph graph, solution* sol) {
         vertex_set* frontier = &list1;
         vertex_set* new_frontier = &list2;
 
-        // initialize all nodes to NOT_VISITED
+        /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
         # pragma omp parallel for
         for (int i=0; i<graph->num_nodes; i++)
             sol->distances[i] = NOT_VISITED_MARKER;
 
-        // setup frontier with the root node
+        /* Setup frontier with the root node. */
         frontier->vertices[frontier->count++] = ROOT_NODE_ID;
         sol->distances[ROOT_NODE_ID] = 0;
 
@@ -314,8 +275,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
     #endif
 
-            // swap pointers
-
+            /* Swap pointers */
             vertex_set* tmp = frontier;
             frontier = new_frontier;
             new_frontier = tmp;
@@ -330,70 +290,46 @@ void bfs_top_down(Graph graph, solution* sol) {
     
 }
 
-
-
-/**************************************************************************************
- * ProcuraBinaria ()
- *
- * Argumentos: a - tabela de items onde sera efetuada a procura
- *             l, r - limites da tabela
- *             x - elemento a pesquisar
- * 			   less, equal - funcoes com comparacoes a ser feitas para encontrar x em a
- * Retorna: inteiro com o indice onde x se encontra na tabela a,
- * 			ou -1 se nao for encontrado
- * Efeitos Secundarios: nenhum
- *
- * Descricao: caso encontre o elemento na tabela retorna indice, caso contrario -1
- * 			  O(lgN)
- **************************************************************************************/
-
-/*int ProcuraBinaria (int a[], int l, int r, int x) {
-    while (r >= l) {
-		int m = (l + r) / 2;
-		if (x == a[m]) return m;
-		if (x < a[m]) r = m - 1;
-		else l = m + 1;
-	}
-	return -1;
-}*/
-
-// return frontier_count
+/*for each vertex v in graph:
+        if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
+            add vertex v to frontier;*/
 bool bottom_up_step(
     Graph g, int* distances, int numEdges, int dist_frontier, int *frontier_count, int min, int max)
 {
-    /*for each vertex v in graph:
-        if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
-            add vertex v to frontier;*/
 
     int numNodes = g->num_nodes;
-    // printf("dist_frontier = %d\n", dist_frontier);
     bool have_new_frontier = false;
     int new_frontier_count = 0;
+
+    /* Explained line 27. Hard coded value was chosen by testing. */
     int chunk_size = (numNodes + 6400 - 1) / 6400;
 
+    /* If the range of nodes that have not yet been visited is low, program's performance is improved
+    if we execute our code sequentially, because of the overhead associated with the communication 
+    between threads and its launching. */
     if (max - min > 8000) {
+        /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
+        we want that a team created once are reused many times. Not active threads are put in wait state, 
+        potentially reducing disbanding cost.  */
         # pragma omp parallel
         {
             int mycount = 0;
             # pragma omp for schedule(dynamic, chunk_size) nowait
             for (int i = min; i <= max; i++) {
-                // printf("Tou no vertice %d\n", i);
                 if (distances[i] == NOT_VISITED_MARKER) {
                     int start_edge = g->incoming_starts[i];
                     int end_edge = (i == numNodes - 1)
                                     ? numEdges
                                     : g->incoming_starts[i + 1];
-                    // printf("Numero vizinhos = %d\n", end_edge - start_edge);
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                         int incoming = g->incoming_edges[neighbor];
 
-                        // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
                         if (distances[incoming] == dist_frontier) {
-                            // printf("Adicionei %d\n", incoming);
                             distances[i] = dist_frontier + 1; 
                             
                             have_new_frontier = true;
 
+                            /* Only for hybrid mode. */
                             if (*frontier_count != -1) {
                                 mycount++;
                             }
@@ -402,8 +338,10 @@ bool bottom_up_step(
                     }
                 }
             }
+            /* Only for hybrid mode. */
             if (*frontier_count != -1) {
                 if (mycount > 0) {
+                    /* Must use atomic to avoid data races. */
                     #pragma omp atomic
                     new_frontier_count += mycount;
                 }
@@ -413,23 +351,20 @@ bool bottom_up_step(
     else {
         for (int i = min; i <= max; i++) {
             int mycount = 0;
-            // printf("Tou no vertice %d\n", i);
             if (distances[i] == NOT_VISITED_MARKER) {
                 int start_edge = g->incoming_starts[i];
                 int end_edge = (i == numNodes - 1)
                                 ? numEdges
                                 : g->incoming_starts[i + 1];
-                // printf("Numero vizinhos = %d\n", end_edge - start_edge);
                 for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                     int incoming = g->incoming_edges[neighbor];
 
-                    // printf("Vizinho %d com distance = %d\n", incoming, distances[incoming]);
                     if (distances[incoming] == dist_frontier) {
-                        // printf("Adicionei %d\n", incoming);
                         distances[i] = dist_frontier + 1; 
                         
                         have_new_frontier = true;
 
+                        /* Only for hybrid mode. */
                         if (*frontier_count != -1) {
                             new_frontier_count++;
                         }
@@ -446,10 +381,7 @@ bool bottom_up_step(
 }
 
 
-
-void bfs_bottom_up(Graph graph, solution* sol)
-{
-    // TODO STUDENTS:
+// TODO STUDENTS:
     //
     // You will need to implement the "bottom up" BFS here as
     // described in the handout.
@@ -460,18 +392,27 @@ void bfs_bottom_up(Graph graph, solution* sol)
     // As was done in the top-down case, you may wish to organize your
     // code by creating subroutine bottom_up_step() that is called in
     // each step of the BFS process.
+void bfs_bottom_up(Graph graph, solution* sol)
+{
+    
     int numNodes = graph->num_nodes, numEdges = graph->num_edges;
     int frontier_count = 1, distance_frontier = 0, flag = -1;
+
+    /* In this algorithm we always have to iterate over all nodes. To avoid that,
+    boosting program's performance we limit the search by checking the range of 
+    nodes that have not yet been visited. */
     int max = numNodes - 1, min = 1;
 
+    /* Control variable to check if BFS computation has finished. */
     bool have_new_frontier = true;
-    // initialize all nodes to NOT_VISITED
+
+    /* initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;    
     }
 
-    // setup frontier with the root node
+    /* Setup frontier with the root node. */
     sol->distances[ROOT_NODE_ID] = 0;
 
     while (have_new_frontier) {
@@ -479,11 +420,10 @@ void bfs_bottom_up(Graph graph, solution* sol)
 #ifdef VERBOSE
         double start_time = CycleTimer::currentSeconds();
 #endif
-        // printf("max = %d, min = %d\n", max, min);
         have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_frontier, &flag, min, max);
         distance_frontier++;
 
-
+        /* Updates the range of nodes that have not yet been visited. */
         if (have_new_frontier) {
             while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
                 min++;
@@ -502,30 +442,27 @@ void bfs_bottom_up(Graph graph, solution* sol)
 
 }
 
-void bfs_hybrid(Graph graph, solution* sol)
-{
-    // TODO STUDENTS:
+
+// TODO STUDENTS:
     //
     // You will need to implement the "hybrid" BFS here as
     // described in the handout.
+void bfs_hybrid(Graph graph, solution* sol)
+{
     int numNodes = graph->num_nodes, frontier_count = 1;
     int numEdges = graph->num_edges, dist_frontier = 0; 
     int max = numNodes - 1, min = 1;
+    
     bool have_new_frontier = true;
     int search_max_in_frontier = 0, search_min_in_frontier = 0;
     
-    //int *outgoingsize;
-    //outgoingsize = (int*) malloc(sizeof(int) * numNodes);
-
-    // initialize all nodes to NOT_VISITED
+    /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;
-        //outgoingsize[i] = outgoing_size(graph, i);
-        //outgoingstarts[i] = graph->outgoing_starts[i];
     }
 
-    // setup frontier with the root node
+    /* Setup frontier with the root node. */
     sol->distances[ROOT_NODE_ID] = 0;
 
     while (have_new_frontier) {
@@ -534,8 +471,11 @@ void bfs_hybrid(Graph graph, solution* sol)
         double start_time = CycleTimer::currentSeconds();
 #endif
 
-        // Top down complexity: number of frontier nodes
-        // Bottom up complexity: number of nodes outside the bfs ~ number of nodes - number of frontier nodes
+        /* Top down complexity is given by number of frontier nodes. Bottom up complexity 
+        is given by: number of nodes outside the bfs. So we can use frontier count as a metric 
+        to decide whether it is more advantageous to perform bottom_up_step or top_down_step_dense
+        for each iteration. To reconcile both steps we used top down step dense to avoid the need
+        of frontier representation. */
         if (frontier_count > numNodes / 8) {
             have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, dist_frontier, &frontier_count, min, max);
             search_max_in_frontier = numNodes;
@@ -553,5 +493,4 @@ void bfs_hybrid(Graph graph, solution* sol)
 
     }
 
-    //free(outgoingsize);
 }
