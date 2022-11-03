@@ -13,7 +13,7 @@ void bfs_top_down_hybrid(Graph graph, solution* sol);
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
 
-// #define VERBOSE
+#define VERBOSE
 void vertex_set_clear(vertex_set* list) {
     list->count = 0;
 }
@@ -279,19 +279,19 @@ void bfs_bottom_up(Graph graph, solution* sol)
 
         /* Updates the range of nodes that have not yet been visited. */
         if (have_new_frontier) {
-            while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
+            while (sol->distances[min] != NOT_VISITED_MARKER) {
                 min++;
             }
 
-            while (sol->distances[max] != NOT_VISITED_MARKER && min <= max) {
+            while (sol->distances[max] != NOT_VISITED_MARKER) {
                 max--;
             }
         }
-
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier: %.4f sec\n", end_time - start_time);
 #endif
+
     }
 
 }
