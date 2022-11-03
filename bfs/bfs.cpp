@@ -162,7 +162,8 @@ bool top_down_step(
                     int index = 0;
 
                     /* Must use atomic to avoid data races. */
-                    if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, dist_new_frontier)) { 
+                    if (distances[outgoing] == NOT_VISITED_MARKER) { 
+                        distances[outgoing] = dist_new_frontier;
                         /* Must use critical to avoid data races. */
                         have_frontier = true;
                         new_frontier[tid][mycount_array[tid]++] = outgoing;
