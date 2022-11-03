@@ -13,7 +13,7 @@ void bfs_top_down_dense(Graph graph, solution* sol);
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
 
-#define VERBOSE
+// #define VERBOSE
 void vertex_set_clear(vertex_set* list) {
     list->count = 0;
 }
@@ -493,7 +493,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
                 max--;
             }
         }
-        
+
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier: %.4f sec\n", end_time - start_time);
