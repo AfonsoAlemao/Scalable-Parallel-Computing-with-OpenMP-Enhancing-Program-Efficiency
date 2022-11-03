@@ -172,15 +172,15 @@ bool top_down_step(
     int **frontier,
     int **new_frontier,
     int *mycount_array,
+    int dist_new_frontier,
     int *distances)
 {
-
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
     bool have_frontier = false;
     int chunk_size = (g->num_nodes + 6400 - 1) / 6400;
     int count0 = mycount_array[0], count1 = mycount_array[1], count2 = mycount_array[2], count3 = mycount_array[3], count4 = mycount_array[4], count5 = mycount_array[5], count6 = mycount_array[6], count7 = mycount_array[7];
-    
+
     #pragma omp parallel 
     {
         int tid = omp_get_thread_num();
@@ -189,7 +189,6 @@ bool top_down_step(
 
         for (int i = tid; i < count0 ; i += numThreads) {
             int node = frontier[0][i];
-            int dist_node = distances[node];
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
                             ? g->num_edges
@@ -202,7 +201,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1; 
+                    distances[outgoing] = dist_new_frontier; 
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -215,7 +214,6 @@ bool top_down_step(
         
         for (int i = tid; i < count1 ; i += numThreads) {
             int node = frontier[1][i];
-            int dist_node = distances[node];
 
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -229,7 +227,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;    
+                    distances[outgoing] = dist_new_frontier;    
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -240,7 +238,6 @@ bool top_down_step(
         }
         for (int i = tid; i < count2 ; i += numThreads) {
             int node = frontier[2][i];
-            int dist_node = distances[node];
 
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -254,7 +251,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;   
+                    distances[outgoing] = dist_new_frontier;   
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -265,7 +262,6 @@ bool top_down_step(
         }
         for (int i = tid; i < count3 ; i += numThreads) {
             int node = frontier[3][i];
-            int dist_node = distances[node];
 
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -279,7 +275,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;     
+                    distances[outgoing] = dist_new_frontier;     
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -290,8 +286,6 @@ bool top_down_step(
         }
         for (int i = tid; i < count4 ; i += numThreads) {
             int node = frontier[4][i];
-            int dist_node = distances[node];
-
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
                             ? g->num_edges
@@ -304,7 +298,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;     
+                    distances[outgoing] = dist_new_frontier;     
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -315,7 +309,6 @@ bool top_down_step(
         }
         for (int i = tid; i < count5 ; i += numThreads) {
             int node = frontier[5][i];
-            int dist_node = distances[node];
 
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
@@ -329,7 +322,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;    
+                    distances[outgoing] = dist_new_frontier;    
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -341,7 +334,7 @@ bool top_down_step(
         
         for (int i = tid; i < count6 ; i += numThreads) {
             int node = frontier[6][i];
-            int dist_node = distances[node];
+            
             int start_edge = g->outgoing_starts[node];
             int end_edge = (node == g->num_nodes - 1)
                             ? g->num_edges
@@ -354,7 +347,7 @@ bool top_down_step(
 
                 /* Must use atomic to avoid data races. */
                 if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                    distances[outgoing] = dist_node + 1;   
+                    distances[outgoing] = dist_new_frontier;   
                     /* Must use critical to avoid data races. */
                     have_frontier = true;
                     new_frontier[tid][mycount_array[tid]++] = outgoing;
@@ -363,31 +356,31 @@ bool top_down_step(
                 
             }
         }
-            for (int i = tid; i < count7 ; i += numThreads) {
-                int node = frontier[7][i];
-                int dist_node = distances[node];
 
-                int start_edge = g->outgoing_starts[node];
-                int end_edge = (node == g->num_nodes - 1)
-                                ? g->num_edges
-                                : g->outgoing_starts[node + 1];
+        for (int i = tid; i < count7 ; i += numThreads) {
+            int node = frontier[7][i];
 
-                /* Attempt to add all neighbors to the new frontier */
-                for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
-                    int outgoing = g->outgoing_edges[neighbor];
-                    int index = 0;
+            int start_edge = g->outgoing_starts[node];
+            int end_edge = (node == g->num_nodes - 1)
+                            ? g->num_edges
+                            : g->outgoing_starts[node + 1];
 
-                    /* Must use atomic to avoid data races. */
-                    if (distances[outgoing] == NOT_VISITED_MARKER) { 
-                        distances[outgoing] = dist_node + 1;   
-                        /* Must use critical to avoid data races. */
-                        have_frontier = true;
-                        new_frontier[tid][mycount_array[tid]++] = outgoing;
-                        
-                    }
+            /* Attempt to add all neighbors to the new frontier */
+            for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
+                int outgoing = g->outgoing_edges[neighbor];
+                int index = 0;
+
+                /* Must use atomic to avoid data races. */
+                if (distances[outgoing] == NOT_VISITED_MARKER) { 
+                    distances[outgoing] = dist_new_frontier;   
+                    /* Must use critical to avoid data races. */
+                    have_frontier = true;
+                    new_frontier[tid][mycount_array[tid]++] = outgoing;
                     
                 }
+                
             }
+        }
         
         
 
@@ -426,13 +419,16 @@ void bfs_top_down(Graph graph, solution* sol) {
         mycount_array[0] = 1;
         // int sumcounts = 1;
         sol->distances[ROOT_NODE_ID] = 0;
+        int dist_new_frontier = 1;
 
         while (have_frontier) {
 
     #ifdef VERBOSE
             double start_time = CycleTimer::currentSeconds();
     #endif
-            have_frontier = top_down_step(graph, frontier, new_frontier, mycount_array, sol->distances);
+            have_frontier = top_down_step(graph, frontier, new_frontier, mycount_array, dist_new_frontier, sol->distances);
+
+            dist_new_frontier++;
 
     #ifdef VERBOSE
         double end_time = CycleTimer::currentSeconds();
