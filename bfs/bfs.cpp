@@ -169,23 +169,25 @@ void bfs_top_down_dense(Graph graph, solution* sol) {
  In this way, it is necessary to explicitly represent the frontiers.*/
 void top_down_step(
     Graph g,
-    int** frontier,
-    int** new_frontier,
-    int* mycount_array,
+    int **frontier,
+    int **new_frontier,
+    int *mycount_array,
+    int *mycount_array_new,
     int sum_mycounts,
-    int* distances)
+    int *distances)
 {
 
     /* If frontier count is low, program's performance is improved if we execute our code sequentially,
     because of the overhead associated with the communication between threads and its launching. */
 
-    #pragma omp parallel {
+    #pragma omp parallel 
+    {
 
         int tid = omp_get_thread_num(); 
         int numThreads = omp_get_num_threads();
 
 
-        # pragma omp parallel for schedule(dynamic, (sum_mycounts + 128 - 1) / 128) nowait
+        # pragma omp parallel for schedule(dynamic, (sum_mycounts + 128 - 1) / 128) 
         for (int i = 0; i < sum_mycounts; i++) {
             int node;
 
@@ -228,7 +230,7 @@ void top_down_step(
                 if (__sync_bool_compare_and_swap (&distances[outgoing], NOT_VISITED_MARKER, distances[node] + 1)) {   
                     /* Must use critical to avoid data races. */             
 
-                    new_frontier[tid][mycount_array[tid]++] = outgoing;
+                    new_frontier[tid][mycount_array_new[tid]++] = outgoing;
                     
                 }
                 
@@ -249,6 +251,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         int **frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
         int **new_frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
         int *mycount_array = (int*)calloc(sizeof(int),8);
+        int *mycount_array_new = (int*)calloc(sizeof(int),8);
 
         for(int i = 0; i < 8; i++){
             frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
@@ -273,7 +276,7 @@ void bfs_top_down(Graph graph, solution* sol) {
             double start_time = CycleTimer::currentSeconds();
     #endif
 
-            top_down_step(graph, frontier, new_frontier, mycount_array, sumcounts, sol->distances);
+            top_down_step(graph, frontier, new_frontier, mycount_array, mycount_array_new, sumcounts, sol->distances);
 
     #ifdef VERBOSE
         double end_time = CycleTimer::currentSeconds();
@@ -283,7 +286,9 @@ void bfs_top_down(Graph graph, solution* sol) {
             sumcounts = 0;
 
             for (int j = 0; j < 8; j++){
-                sumcounts += mycount_array[j];
+                sumcounts += mycount_array_new[j];
+                mycount_array[j] = mycount_array_new[j];
+                mycount_array_new[j] = 0;
             }
         }
         
