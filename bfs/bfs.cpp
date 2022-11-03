@@ -8,7 +8,7 @@
 
 #include "../common/CycleTimer.h"
 #include "../common/graph.h"
-void bfs_top_down_dense(Graph graph, solution* sol);
+void bfs_top_down_hybrid(Graph graph, solution* sol);
 
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
@@ -35,7 +35,7 @@ between threads and the launching of these be harmful to the performance of the 
   In this way, it is not necessary to explicitly represent the frontiers, 
   it is enough to represent the distances of each vertex to the root.
   frontier_count is only useful in hybrid mode (*frontier_count == -1 for the other modes). */ 
-bool top_down_step_dense(
+bool top_down_step_hybrid(
     Graph g,
     int* distances, int numEdges, int dist_frontier, int *frontier_count, 
     int *search_max_in_frontier, int *search_min_in_frontier)
@@ -119,46 +119,6 @@ bool top_down_step_dense(
     *search_min_in_frontier = min;
 
     return have_new_frontier;
-}
-
-/* Implements top-down BFS for dense graphs.
-  Performance is better if we iterate through the nodes rather than across the frontier. 
-  In this way, it is not necessary to explicitly represent the frontiers, 
-  it is enough to represent the distances of each vertex to the root.
-  Result of execution is that, for each node in the graph, the
-  distance to the root is stored in sol.distances. */
-void bfs_top_down_dense(Graph graph, solution* sol) {
-    
-    int numNodes = graph->num_nodes;
-    int numEdges = graph->num_edges, dist_frontier = 0, flag = -1;
-    bool have_new_frontier = true;
-
-    int search_max_in_frontier = 0, search_min_in_frontier = 0;
-
-    /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
-    # pragma omp parallel for
-    for (int i = 0; i < numNodes; i++) {
-        sol->distances[i] = NOT_VISITED_MARKER;
-    }
-
-    /* Setup frontier with the root node */
-    sol->distances[ROOT_NODE_ID] = 0;
-
-    while (have_new_frontier) {
-
-#ifdef VERBOSE
-        double start_time = CycleTimer::currentSeconds();
-#endif
-
-        have_new_frontier = top_down_step_dense(graph, sol->distances, numEdges, dist_frontier, &flag, &search_max_in_frontier, &search_min_in_frontier);
-        dist_frontier++;
-
-#ifdef VERBOSE
-    double end_time = CycleTimer::currentSeconds();
-    printf("frontier: %.4f sec\n",  end_time - start_time);
-#endif
-
-    }
 }
 
 
@@ -397,63 +357,57 @@ void bfs_top_down(Graph graph, solution* sol) {
     /* Graph density is equal to 2 E / V. If graph is dense (we use 10 as threshold), 
     performance is better if we iterate through the nodes rather than across the frontier. 
     Otherwise, is better if we iterate through the frontier rather than across the nodes. */ 
-    //if (graph->num_edges * 2 / graph->num_nodes < 10) {
-        int **frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
-        int **new_frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
-        int *mycount_array = (int*)calloc(sizeof(int),8);
-        bool have_frontier = true;
+    int **frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
+    int **new_frontier  = (int**)malloc(sizeof(int) *8* graph->num_nodes);
+    int *mycount_array = (int*)calloc(sizeof(int),8);
+    bool have_frontier = true;
 
-        for(int i = 0; i < 8; i++){
-            frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
-            new_frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
-        }
+    for(int i = 0; i < 8; i++){
+        frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
+        new_frontier[i]  = (int*)malloc(sizeof(int) *graph->num_nodes);
+    }
 
 
-        /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
-        # pragma omp parallel for
-        for (int i=0; i<graph->num_nodes; i++)
-            sol->distances[i] = NOT_VISITED_MARKER;
+    /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
+    # pragma omp parallel for
+    for (int i=0; i<graph->num_nodes; i++)
+        sol->distances[i] = NOT_VISITED_MARKER;
 
-        /* Setup frontier with the root node. */
-        frontier[0][0] = ROOT_NODE_ID;
-        mycount_array[0] = 1;
-        // int sumcounts = 1;
-        sol->distances[ROOT_NODE_ID] = 0;
-        int dist_new_frontier = 1;
+    /* Setup frontier with the root node. */
+    frontier[0][0] = ROOT_NODE_ID;
+    mycount_array[0] = 1;
+    // int sumcounts = 1;
+    sol->distances[ROOT_NODE_ID] = 0;
+    int dist_new_frontier = 1;
 
-        while (have_frontier) {
+    while (have_frontier) {
 
-    #ifdef VERBOSE
-            double start_time = CycleTimer::currentSeconds();
-    #endif
-            have_frontier = top_down_step(graph, frontier, new_frontier, mycount_array, dist_new_frontier, sol->distances);
+#ifdef VERBOSE
+        double start_time = CycleTimer::currentSeconds();
+#endif
+        have_frontier = top_down_step(graph, frontier, new_frontier, mycount_array, dist_new_frontier, sol->distances);
 
-            dist_new_frontier++;
+        dist_new_frontier++;
 
-    #ifdef VERBOSE
-        double end_time = CycleTimer::currentSeconds();
-        printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
-    #endif
+#ifdef VERBOSE
+    double end_time = CycleTimer::currentSeconds();
+    printf("frontier=%-10d %.4f sec\n", frontier->count, end_time - start_time);
+#endif
 
-            //sumcounts = 0;
+        //sumcounts = 0;
 
-            int **temp = frontier;
-            frontier = new_frontier;
-            new_frontier = temp;
-        }
-        
-        for(int i = 0; i < 8; i++){
-            free(frontier[i]);
-            free(new_frontier[i]);
-        }
-        free(frontier);
-        free(new_frontier);
-        free(mycount_array);
-    //}
-    /* else {
-        bfs_top_down_dense(graph, sol);
-    }*/
+        int **temp = frontier;
+        frontier = new_frontier;
+        new_frontier = temp;
+    }
     
+    for(int i = 0; i < 8; i++){
+        free(frontier[i]);
+        free(new_frontier[i]);
+    }
+    free(frontier);
+    free(new_frontier);
+    free(mycount_array);
 }
 
 /*for each vertex v in graph:
@@ -648,7 +602,7 @@ void bfs_hybrid(Graph graph, solution* sol)
             search_min_in_frontier = 0;
         }
         else {
-            have_new_frontier = top_down_step_dense(graph, sol->distances, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier, &search_min_in_frontier);
+            have_new_frontier = top_down_step_hybrid(graph, sol->distances, numEdges, dist_frontier, &frontier_count, &search_max_in_frontier, &search_min_in_frontier);
         }
         dist_frontier++;
 
