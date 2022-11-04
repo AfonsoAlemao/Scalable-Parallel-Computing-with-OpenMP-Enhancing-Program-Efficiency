@@ -84,9 +84,7 @@ bool top_down_step(
         }
         
     }
-
     return have_frontier;
-   
 }
 
 
@@ -94,8 +92,8 @@ bool top_down_step(
 in the graph, the distance to the root is stored in sol.distances. */
 void bfs_top_down(Graph graph, solution* sol) {
 
-    int **frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
-    int **new_frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
+    int **frontier  = (int**) malloc(sizeof(int*) * 8);
+    int **new_frontier  = (int**) malloc(sizeof(int*) * 8);
     int *mycount_array = (int*) calloc(sizeof(int), 8);
     bool have_frontier = true;
 
@@ -103,7 +101,6 @@ void bfs_top_down(Graph graph, solution* sol) {
         frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
         new_frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
     }
-
 
     /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
