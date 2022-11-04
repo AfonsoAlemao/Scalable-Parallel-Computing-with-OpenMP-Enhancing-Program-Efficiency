@@ -160,7 +160,7 @@ bool bottom_up_step(
     /* If the range of nodes that have not yet been visited is low, program's performance is improved
     if we execute our code sequentially, because of the overhead associated with the communication 
     between threads and its launching. */
-    if (true) {
+    if (max - min > 8000) {
         /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
         we want that a team created once are reused many times. Not active threads are put in wait state, 
         potentially reducing disbanding cost.  */
@@ -168,7 +168,7 @@ bool bottom_up_step(
         {
             int mycount = 0;
             # pragma omp for schedule(dynamic, chunk_size) nowait
-            for (int i = 0; i <= numNodes - 1; i++) {
+            for (int i = min; i <= max; i++) {
                 if (distances[i] == NOT_VISITED_MARKER) {
                     int start_edge = g->incoming_starts[i];
                     int end_edge = (i == numNodes - 1)
@@ -276,7 +276,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
         distance_frontier++;
 
         /* Updates the range of nodes that have not yet been visited. */
-        /*if (have_new_frontier) {
+        if (have_new_frontier) {
             while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
                 min++;
             }
@@ -284,7 +284,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
             while (sol->distances[max] != NOT_VISITED_MARKER && min <= max) {
                 max--;
             }
-        }*/
+        }
 #ifdef VERBOSE
     double end_time = CycleTimer::currentSeconds();
     printf("frontier: %.4f sec\n", end_time - start_time);
