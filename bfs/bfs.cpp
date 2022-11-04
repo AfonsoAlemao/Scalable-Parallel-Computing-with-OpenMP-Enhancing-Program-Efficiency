@@ -84,7 +84,9 @@ bool top_down_step(
         }
         
     }
+
     return have_frontier;
+   
 }
 
 
@@ -101,6 +103,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
         new_frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
     }
+
 
     /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
