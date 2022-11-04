@@ -165,9 +165,13 @@ bool bottom_up_step(
     we want that a team created once are reused many times. Not active threads are put in wait state, 
     potentially reducing disbanding cost.  */
 
-    for (int i = 0; i < 8; i++0){
-        for (int j = 0; j < num_nodes)
-    }
+    /*for (int i = 0; i < 8; i++) {
+        printf("mycount_array[%d] = %d\n", i, mycount_array[i]);
+        for (int j = 0; j < g->num_nodes; j++) {
+            printf("not_frontier[%d][%d] = %d\n", i, j, not_frontier[i][j]);
+        }
+        printf("\n");
+    }*/
 
     # pragma omp parallel
     {
@@ -182,6 +186,9 @@ bool bottom_up_step(
         }
         else if(numThreads == 4){
             kk = 2;
+        }
+        else if(numThreads == 2){
+            kk = 4;
         }
 
         for (int k = 0; k < kk; k++){
@@ -202,7 +209,7 @@ bool bottom_up_step(
 
                         if (distances[incoming] == dist_frontier) {
                             distances[i] = dist_frontier + 1; 
-                            printf("adicionei o %d \n", i);
+                            // printf("adicionei o %d \n", i);
                             not_frontier[aux][j] = not_frontier[aux][count-1];
                             count--;
                             j--;
@@ -216,7 +223,7 @@ bool bottom_up_step(
             }
         }
     }
-    printf("\n \n");
+    // printf("\n\n");
     return have_new_frontier;
 }
 
@@ -260,12 +267,6 @@ void bfs_bottom_up(Graph graph, solution* sol)
         # pragma omp for nowait
         for (int i = 0; i < numNodes; i++) {
             sol->distances[i] = NOT_VISITED_MARKER;
-            if( i < numNodes/max_threads + 1) {
-                for(int k = 0; k < max_threads; k++){
-                    not_frontier[k][i] = (i + 1)*(k + 1);
-                }
-            }
-            
         }
         # pragma omp for 
         for (int j = 0; j < max_threads; j++) {
@@ -278,7 +279,15 @@ void bfs_bottom_up(Graph graph, solution* sol)
             //printf("mycount_array[%d] = %d \n", kk, mycount_array[kk]);
         }
 
+        int index = 0;
+        for (int x = 0; x < 8; x++) {
+            for (int k = 0; k < mycount_array[x]; k++) {
+                not_frontier[x][k] = index++;
+            }
+        }
+        
     }
+    
 
     /* Setup frontier with the root node. */
     sol->distances[ROOT_NODE_ID] = 0;
