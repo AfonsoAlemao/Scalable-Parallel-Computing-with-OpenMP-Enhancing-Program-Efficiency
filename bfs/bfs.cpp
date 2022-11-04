@@ -236,7 +236,6 @@ void bfs_bottom_up(Graph graph, solution* sol)
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;    
         frontier[i] = false;
-        new_frontier[i] = false;
         not_visited[i] = true;
     }
 
