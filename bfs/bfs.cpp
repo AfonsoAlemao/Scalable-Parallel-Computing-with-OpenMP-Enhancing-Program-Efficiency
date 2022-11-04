@@ -160,7 +160,7 @@ bool bottom_up_step(
     /* If the range of nodes that have not yet been visited is low, program's performance is improved
     if we execute our code sequentially, because of the overhead associated with the communication 
     between threads and its launching. */
-    if (max - min > 8000) {
+    //if (max - min > 8000) {
         /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
         we want that a team created once are reused many times. Not active threads are put in wait state, 
         potentially reducing disbanding cost.  */
@@ -174,6 +174,7 @@ bool bottom_up_step(
                     int end_edge = (i == numNodes - 1)
                                     ? numEdges
                                     : g->incoming_starts[i + 1];
+                    
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                         int incoming = g->incoming_edges[neighbor];
 
@@ -199,8 +200,8 @@ bool bottom_up_step(
                 }
             }
         }
-    }
-    else {
+    //}
+    /*else {
         for (int i = min; i <= max; i++) {
             int mycount = 0;
             if (distances[i] == NOT_VISITED_MARKER) {
@@ -216,7 +217,7 @@ bool bottom_up_step(
                         
                         have_new_frontier = true;
 
-                        /* Only for hybrid mode. */
+                        // Only for hybrid mode.
                         if (*frontier_count != -1) {
                             new_frontier_count++;
                         }
@@ -225,7 +226,7 @@ bool bottom_up_step(
                 }
             }
         }
-    }
+    }*/
 
     *frontier_count = new_frontier_count;
 
@@ -251,7 +252,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
     int frontier_count = 1, distance_frontier = 0, flag = -1;
 
     /* In this algorithm we always have to iterate over all nodes. To avoid that,
-    boosting program's performance we limit the search by checking the range of 
+    we boost program's performance we limit the search by checking the range of 
     nodes that have not yet been visited. */
     int max = numNodes - 1, min = 1;
 
