@@ -33,7 +33,7 @@ between threads and the launching of these be harmful to the performance of the 
 
 /* Take one step of "top-down" BFS.  For each vertex on the frontier,
  follow all outgoing edges, and add all neighboring vertices to the
- new_frontier. */
+ new_frontier. Used for not dense graphs. */
 bool top_down_step(
     Graph g,
     int **frontier,
@@ -57,9 +57,6 @@ bool top_down_step(
         int numThreads = omp_get_num_threads();
         mycount_array[tid] = 0;
 
-        /* For each subarray of the frontier, we will distribute manually the processing of its elements by the 
-        active threads in an equal way (static scheduling), meaning each thread will be responsible for processing 
-        a similar amount of frontier elements. */
         for (int k = 0; k < 8; k++) {
             for (int i = tid; i < count[k] ; i += numThreads) {
                 int node = frontier[k][i];
@@ -85,8 +82,8 @@ bool top_down_step(
                 }
             }
         }
+        
     }
-
     return have_frontier;
 }
 
@@ -100,11 +97,6 @@ void bfs_top_down(Graph graph, solution* sol) {
     int *mycount_array = (int*) calloc(sizeof(int), 8);
     bool have_frontier = true;
 
-    /* Initially, we allocate memory for the storage of the frontier and the new frontier. To do so, we allocate a 
-    two-dimensional array, which allows distributing the frontier nodes by subarrays associated with each thread, i.e, 
-    each subarray will contain the the elements that were added by its associated thread, in the previous step. In order
-    to control the number of elements in each subarray, there will be an array called mycount array, which at position i 
-    will store the number of elements stored in the subarray associated with the thread whose id equal to i. */
     for (int i = 0; i < 8; i++) {
         frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
         new_frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
@@ -118,7 +110,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     /* Setup frontier with the root node. */
     frontier[0][0] = ROOT_NODE_ID;
     mycount_array[0] = 1;
-
+    // int sumcounts = 1;
     sol->distances[ROOT_NODE_ID] = 0;
     int dist_new_frontier = 1;
 
@@ -149,6 +141,7 @@ void bfs_top_down(Graph graph, solution* sol) {
     free(new_frontier);
     free(mycount_array);
 }
+
 
 
 /*for each vertex v in graph:
