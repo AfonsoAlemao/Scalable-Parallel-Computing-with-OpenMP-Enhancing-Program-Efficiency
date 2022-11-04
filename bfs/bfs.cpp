@@ -148,7 +148,7 @@ void bfs_top_down(Graph graph, solution* sol) {
         if v has not been visited AND v shares an incoming edge with a vertex u on the frontier:
             add vertex v to frontier;*/
 bool bottom_up_step(
-    Graph g, int* distances, int numEdges, int dist_frontier, int min, int max, bool *not_visited, 
+    Graph g, int* distances, int numEdges, int distance_new_frontier, int min, int max, bool *not_visited, 
     bool *frontier, bool *new_frontier)
 {
     int numNodes = g->num_nodes;
@@ -183,7 +183,7 @@ bool bottom_up_step(
                     int incoming = g->incoming_edges[neighbor];
 
                     if (frontier[incoming]) {
-                        distances[i] = dist_frontier + 1; 
+                        distances[i] = distance_new_frontier; 
                         
                         new_frontier[i] = true;
                         not_visited[i] = false;
@@ -216,12 +216,13 @@ void bfs_bottom_up(Graph graph, solution* sol)
 {
     
     int numNodes = graph->num_nodes, numEdges = graph->num_edges;
-    int frontier_count = 1, distance_frontier = 0;
+    int frontier_count = 1, distance_new_frontier = 1;
 
     /* In this algorithm we always have to iterate over all nodes. To avoid that,
     we boost program's performance we limit the search by checking the range of 
     nodes that have not yet been visited. */
     int max = numNodes - 1, min = 1;
+    bool *temp;
 
     /* Control variable to check if BFS computation has finished. */
     bool have_new_frontier = true;
@@ -249,8 +250,8 @@ void bfs_bottom_up(Graph graph, solution* sol)
 #ifdef VERBOSE
         double start_time = CycleTimer::currentSeconds();
 #endif
-        have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_frontier, min, max, not_visited, frontier, new_frontier);
-        distance_frontier++;
+        have_new_frontier = bottom_up_step(graph, sol->distances, numEdges, distance_new_frontier, min, max, not_visited, frontier, new_frontier);
+        distance_new_frontier++;
 
         /* Updates the range of nodes that have not yet been visited. */
         if (have_new_frontier) {
@@ -263,7 +264,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
             }
         }
 
-        bool *temp = frontier;
+        temp = frontier;
         frontier = new_frontier;
         new_frontier = temp;
 
