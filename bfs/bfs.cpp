@@ -231,6 +231,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
     not_visited = (bool*) malloc(sizeof(bool) * graph->num_nodes);
 
     /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
+    /* We use a boolean array to mark the nodes inside each frontier, and the nodes not visited yet. */
     # pragma omp parallel for
     for (int i = 0; i < numNodes; i++) {
         sol->distances[i] = NOT_VISITED_MARKER;    
