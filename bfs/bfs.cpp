@@ -254,11 +254,11 @@ void bfs_bottom_up(Graph graph, solution* sol)
 
         /* Updates the range of nodes that have not yet been visited. */
         if (have_new_frontier) {
-            while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
+            while (!not_visited[min] && min <= max) {
                 min++;
             }
 
-            while (sol->distances[max] != NOT_VISITED_MARKER && min <= max) {
+            while (!not_visited[max] && min <= max) {
                 max--;
             }
         }
