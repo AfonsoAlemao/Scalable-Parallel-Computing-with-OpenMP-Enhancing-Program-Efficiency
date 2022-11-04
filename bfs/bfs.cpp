@@ -95,8 +95,8 @@ bool top_down_step(
 in the graph, the distance to the root is stored in sol.distances. */
 void bfs_top_down(Graph graph, solution* sol) {
 
-    int **frontier  = (int**) malloc(sizeof(int*) * 8 );
-    int **new_frontier  = (int**) malloc(sizeof(int*) * 8 );
+    int **frontier  = (int**) malloc(sizeof(int*) * 8);
+    int **new_frontier  = (int**) malloc(sizeof(int*) * 8);
     int *mycount_array = (int*) calloc(sizeof(int), 8);
     bool have_frontier = true;
 
@@ -104,7 +104,6 @@ void bfs_top_down(Graph graph, solution* sol) {
         frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
         new_frontier[i]  = (int*) malloc(sizeof(int) * graph->num_nodes);
     }
-
 
     /* Initialize all nodes to NOT_VISITED. The workload is balanced across iterations. */
     # pragma omp parallel for
@@ -279,10 +278,37 @@ void bfs_bottom_up(Graph graph, solution* sol)
             //printf("mycount_array[%d] = %d \n", kk, mycount_array[kk]);
         }
 
-        int index = 0;
+        int partialsum2 = mycount_array[0] + mycount_array[1], partialsum3 = partialsum2 + mycount_array[2];
+        int partialsum4 = partialsum3 + mycount_array[3], partialsum5 = partialsum4 + mycount_array[4];
+        int partialsum6 = partialsum5 + mycount_array[5], partialsum7 = partialsum6 + mycount_array[6];
+        
+        # pragma omp for
         for (int x = 0; x < 8; x++) {
             for (int k = 0; k < mycount_array[x]; k++) {
-                not_frontier[x][k] = index++;
+                if (x == 0) {
+                    not_frontier[x][k] = k;
+                }
+                else if (x == 1) {
+                    not_frontier[x][k] = k + mycount_array[0];
+                }
+                else if (x == 2) {
+                    not_frontier[x][k] = k + partialsum2;
+                }
+                else if (x == 3) {
+                    not_frontier[x][k] = k + partialsum3;
+                }
+                else if (x == 4) {
+                    not_frontier[x][k] = k + partialsum4;
+                }
+                else if (x == 5) {
+                    not_frontier[x][k] = k + partialsum5;
+                }
+                else if (x == 6) {
+                    not_frontier[x][k] = k + partialsum6;
+                }
+                else if (x == 7) {
+                    not_frontier[x][k] = k + partialsum7;
+                }
             }
         }
         
