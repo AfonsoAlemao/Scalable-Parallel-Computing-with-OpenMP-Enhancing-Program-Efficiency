@@ -13,7 +13,7 @@ void bfs_top_down_hybrid(Graph graph, solution* sol);
 #define ROOT_NODE_ID 0
 #define NOT_VISITED_MARKER -1
 
-#define VERBOSE
+// #define VERBOSE
 void vertex_set_clear(vertex_set* list) {
     list->count = 0;
 }
@@ -95,8 +95,8 @@ bool top_down_step(
 in the graph, the distance to the root is stored in sol.distances. */
 void bfs_top_down(Graph graph, solution* sol) {
 
-    int **frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
-    int **new_frontier  = (int**) malloc(sizeof(int) * 8 * graph->num_nodes);
+    int **frontier  = (int**) malloc(sizeof(int*) * 8);
+    int **new_frontier  = (int**) malloc(sizeof(int*) * 8);
     int *mycount_array = (int*) calloc(sizeof(int), 8);
     bool have_frontier = true;
 
