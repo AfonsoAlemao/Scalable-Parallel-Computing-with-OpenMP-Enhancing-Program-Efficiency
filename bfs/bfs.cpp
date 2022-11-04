@@ -168,12 +168,12 @@ bool bottom_up_step(
     # pragma omp parallel
     {
         # pragma omp for
-        for (int i = 0; i <= numNodes; i++) {
+        for (int i = 0; i < numNodes; i++) {
             new_frontier[i] = false;
         }
 
         # pragma omp for schedule(dynamic, chunk_size) nowait
-        for (int i = 0; i <= numNodes; i++) {
+        for (int i = min; i <= max; i++) {
             if (not_visited[i]) {
                 int start_edge = g->incoming_starts[i];
                 int end_edge = (i == numNodes - 1)
@@ -222,7 +222,6 @@ void bfs_bottom_up(Graph graph, solution* sol)
     we boost program's performance we limit the search by checking the range of 
     nodes that have not yet been visited. */
     int max = numNodes - 1, min = 1;
-    bool *temp;
 
     /* Control variable to check if BFS computation has finished. */
     bool have_new_frontier = true;
@@ -264,7 +263,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
             }
         }
 
-        temp = frontier;
+        bool *temp = frontier;
         frontier = new_frontier;
         new_frontier = temp;
 
