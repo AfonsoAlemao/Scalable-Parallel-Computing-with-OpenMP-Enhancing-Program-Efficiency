@@ -157,6 +157,9 @@ bool bottom_up_step(
 
     /* Explained line 27. Hard coded value was chosen by testing. */
     int chunk_size = (numNodes + 6400 - 1) / 6400;
+    if (max - min < 8000) {
+        chunk_size = (numNodes + 800 - 1) / 800;
+    }
 
     /* If the range of nodes that have not yet been visited is low, program's performance is improved
     if we execute our code sequentially, because of the overhead associated with the communication 
@@ -168,7 +171,7 @@ bool bottom_up_step(
     # pragma omp parallel
     {
         # pragma omp for
-        for (int i = 0; i < numNodes; i++) {
+        for (int i = min; i <= max; i++) {
             new_frontier[i] = false;
         }
 
