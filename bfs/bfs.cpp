@@ -173,7 +173,7 @@ bool bottom_up_step(
         }
 
         # pragma omp for schedule(dynamic, chunk_size) nowait
-        for (int i = min; i <= max; i++) {
+        for (int i = 0; i <= numNodes - 1; i++) {
             if (not_visited[i]) {
                 int start_edge = g->incoming_starts[i];
                 int end_edge = (i == numNodes - 1)
@@ -253,7 +253,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
         distance_frontier++;
 
         /* Updates the range of nodes that have not yet been visited. */
-        if (have_new_frontier) {
+        /*if (have_new_frontier) {
             while (sol->distances[min] != NOT_VISITED_MARKER && min <= max) {
                 min++;
             }
@@ -261,7 +261,7 @@ void bfs_bottom_up(Graph graph, solution* sol)
             while (sol->distances[max] != NOT_VISITED_MARKER && min <= max) {
                 max--;
             }
-        }
+        }*/
 
         bool *temp = frontier;
         frontier = new_frontier;
