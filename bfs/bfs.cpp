@@ -169,7 +169,7 @@ bool bottom_up_step(
     {
         # pragma omp for
         for (int i = 0; i < numNodes; i++) {
-            new_frontier[i] = 0;
+            new_frontier[i] = false;
         }
 
         # pragma omp for schedule(dynamic, chunk_size) nowait
