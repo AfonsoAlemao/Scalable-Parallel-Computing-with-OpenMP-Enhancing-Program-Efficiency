@@ -164,7 +164,7 @@ bool bottom_up_step(
         /* To avoid that teams of OpenMP threads can be created and disbanded (or put in wait state) many times, 
         we want that a team created once are reused many times. Not active threads are put in wait state, 
         potentially reducing disbanding cost.  */
-        # pragma omp parallel reduction(+:new_frontier_count)
+        # pragma omp parallel
         {
             int mycount = 0;
             # pragma omp for schedule(dynamic, chunk_size) nowait
@@ -174,7 +174,6 @@ bool bottom_up_step(
                     int end_edge = (i == numNodes - 1)
                                     ? numEdges
                                     : g->incoming_starts[i + 1];
-                    
                     for (int neighbor = start_edge; neighbor < end_edge; neighbor++) {
                         int incoming = g->incoming_edges[neighbor];
 
